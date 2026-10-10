@@ -19,6 +19,10 @@ public class AdminDashboardResponse {
     private long activeFaculty;
     private BigDecimal outstandingFines;
     private BigDecimal finesCollected;
+    private long pendingBorrowRequests;
+
+    public long getPendingBorrowRequests() { return pendingBorrowRequests; }
+    public void setPendingBorrowRequests(long pendingBorrowRequests) { this.pendingBorrowRequests = pendingBorrowRequests; }
 
     private List<TransactionResponse> recentTransactions;
     private List<BookResponse> recentlyAddedBooks;

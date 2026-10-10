@@ -73,7 +73,7 @@ flowchart TD
 - **Universal Password Recovery:** All 4 portals (`/admin/login`, `/librarian/login`, `/student/login`, `/faculty/login`) feature prominent password recovery.
 - **Anti-Enumeration Security:** Generic response protects against user account enumeration; time-limited (15 min) single-use cryptographic tokens prevent replay attacks.
 - **Password Complexity Validation:** Requires 8+ characters, uppercase, lowercase, numbers, and special characters before BCrypt hashing.
-- **Default Bootstrap:** Pre-configured local dev accounts `Admin` (`Admin2026`) and `librarian` (`librarian123`), preserving user passwords across server restarts.
+- **Default Bootstrap:** Pre-configured local dev accounts `Admin` (`ADM2026`), `librarian` (`LIB2026`), Faculty (`FAC2026`), and Students (`STU2026`), preserving user-customized passwords across server restarts.
 
 ---
 
@@ -93,15 +93,16 @@ CampusNest implements strict role-based authorization across all backend REST en
 
 ## 🔑 Default Credentials & Development Accounts
 
-| Portal | Username / ID | Initial Password | Role / Access Details |
+| Portal | Username / Identifier | Default Password | Role / Access Scope |
 | :--- | :--- | :--- | :--- |
-| **Administrator** | `Admin` | `Admin2026` | System Administrator (Full System Privileges) |
-| **Librarian** | `librarian` | `librarian123` | Chief Circulation Desk Librarian |
-| **Subject Head** | `FAC2026001` | `FacultyPass123@` | Dr. Rajesh Kumar (Head of CSE & Subject Head) |
-| **Faculty Member**| `FAC2026002` | `FacultyPassword123!` | Prof. Anita Deshmukh (Associate Professor, IT) |
-| **Faculty Member**| `FAC2026003` | `FacultyPassword123!` | Prof. Sathya (Assistant Professor, CSE) |
-| **Student** | `STU2026001` | `NewStudentPass123@` | Arjun Sharma (CSE, 3rd Year, Semester 6, Section A) |
-| **Student** | `STU2026002` | `22112005` *(DOB)* | Priya Patel (Electronics, 3rd Year) |
+| **Administrator** | `Admin` | `ADM2026` | System Administrator (Full System Privileges) |
+| **Librarian** | `librarian` *(or `LIB2026001`)* | `LIB2026` | Chief Circulation Desk Librarian |
+| **Faculty / Subject Head** | `FAC2026001` | `FAC2026` | Dr. Rajesh Kumar (Head of CSE & Subject Head) |
+| **Faculty Member**| `FAC2026002` | `FAC2026` | Prof. Anita Deshmukh (Associate Professor, IT) |
+| **Faculty Member**| `FAC2026003` | `FAC2026` | Prof. Sathya (Assistant Professor, CSE) |
+| **Faculty Member**| `FAC2026004` | `FAC2026` | Prof. John Hyde (Assistant Professor, CSE) |
+| **Student** | `STU2026001` | `STU2026` | Arjun Sharma (CSE, 3rd Year, Semester 6, Section A) |
+| **Student** | `STU2026002` | `STU2026` | Priya Patel (Electronics, 3rd Year) |
 ---
 
 ## 📚 Seeded Book Catalogue (103 Books, 20 Categories)

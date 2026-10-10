@@ -4,8 +4,8 @@
 -- Description: Repairs or initializes the local development administrator account
 -- Credentials Configured:
 --   Username: Admin (Exact case, capitalized 'A')
---   Password: Admin2026
---   BCrypt Hash: $2a$10$TJFuSvv0VCj5HMuaeuBTveWPr0OqDTEM8WdtJV3TtW1v4lreDkHfy
+--   Password: ADM2026
+--   BCrypt Hash: $2a$10$pLUxnVkGworrlwyJhBmQk.D7KNG5nTb2cw0ZbcfJ8OOTyGIS9V.Bi
 --   Role: ROLE_ADMIN
 --   Account Status: Active (is_active = 1)
 --   First Login Required: False (first_login = 0)
@@ -22,7 +22,7 @@ WHERE NOT EXISTS (SELECT 1 FROM roles WHERE name = 'ROLE_ADMIN');
 -- 2. Update existing administrator account if present by id 1, username 'admin', or admin email
 UPDATE users
 SET username = 'Admin',
-    password_hash = '$2a$10$TJFuSvv0VCj5HMuaeuBTveWPr0OqDTEM8WdtJV3TtW1v4lreDkHfy',
+    password_hash = '$2a$10$pLUxnVkGworrlwyJhBmQk.D7KNG5nTb2cw0ZbcfJ8OOTyGIS9V.Bi',
     role_id = (SELECT id FROM roles WHERE name = 'ROLE_ADMIN' LIMIT 1),
     is_active = 1,
     first_login = 0
@@ -32,7 +32,7 @@ WHERE id = 1
 
 -- 3. If no administrator account existed, create it
 INSERT INTO users (id, username, password_hash, full_name, email, phone, role_id, is_active, first_login, created_at, updated_at)
-SELECT 1, 'Admin', '$2a$10$TJFuSvv0VCj5HMuaeuBTveWPr0OqDTEM8WdtJV3TtW1v4lreDkHfy', 
+SELECT 1, 'Admin', '$2a$10$pLUxnVkGworrlwyJhBmQk.D7KNG5nTb2cw0ZbcfJ8OOTyGIS9V.Bi', 
        'System Administrator', 'admin@campusnest.edu', '+91 9876543210',
        (SELECT id FROM roles WHERE name = 'ROLE_ADMIN' LIMIT 1),
        1, 0, NOW(), NOW()

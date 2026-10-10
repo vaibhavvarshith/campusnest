@@ -17,6 +17,11 @@ import {
   Settings,
   UserCircle,
   Clock,
+  Award,
+  BookOpen,
+  ClipboardList,
+  CheckSquare,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -26,29 +31,36 @@ export default function Sidebar({ isOpen, onClose }) {
   const adminLinks = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/books', label: 'Book Catalogue', icon: BookMarked },
-    { to: '/borrow-requests', label: 'Borrow Requests', icon: ArrowRightLeft },
     { to: '/students', label: 'Students', icon: GraduationCap },
     { to: '/faculty', label: 'Faculty', icon: Users },
-    { to: '/issue-return', label: 'Issue & Return', icon: ArrowRightLeft },
+    { to: '/librarians', label: 'Librarians', icon: BookOpen },
+    { to: '/subject-head', label: 'Subject Heads', icon: Award },
+    { to: '/borrow-requests', label: 'Borrow Requests', icon: ArrowRightLeft },
+    { to: '/issue-return', label: 'Issue and Return', icon: CheckSquare },
     { to: '/borrow-history', label: 'Borrowing History', icon: History },
     { to: '/overdue', label: 'Overdue Books', icon: AlertTriangle },
     { to: '/fines', label: 'Fine Management', icon: Receipt },
-    { to: '/projects', label: 'Projects & Assign.', icon: FolderGit2 },
+    { to: '/projects', label: 'Academic Projects', icon: FolderGit2 },
+    { to: '/assignments', label: 'Assignments', icon: ClipboardList },
+    { to: '/faculty-allocation', label: 'Faculty Allocation', icon: Award },
+    { to: '/submissions', label: 'Student Submissions', icon: FileCheck2 },
     { to: '/notifications', label: 'Notifications', icon: Bell },
-    { to: '/reports', label: 'Reports & Audits', icon: BarChart3 },
+    { to: '/reports', label: 'Reports', icon: BarChart3 },
     { to: '/settings', label: 'Library Settings', icon: Settings },
+    { to: '/profile', label: 'Change Password', icon: UserCircle },
   ];
 
   const librarianLinks = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/books', label: 'Book Catalogue', icon: BookMarked },
     { to: '/borrow-requests', label: 'Borrow Requests', icon: ArrowRightLeft },
-    { to: '/issue-return', label: 'Issue & Return', icon: ArrowRightLeft },
+    { to: '/issue-return', label: 'Issue & Return', icon: CheckSquare },
     { to: '/borrow-history', label: 'Borrowing History', icon: History },
     { to: '/overdue', label: 'Overdue Books', icon: AlertTriangle },
     { to: '/fines', label: 'Fine Management', icon: Receipt },
     { to: '/students', label: 'Students', icon: GraduationCap },
     { to: '/notifications', label: 'Notifications', icon: Bell },
+    { to: '/profile', label: 'Change Password', icon: UserCircle },
   ];
 
   const studentLinks = [
@@ -57,10 +69,10 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/my-books', label: 'My Borrowed Books', icon: History },
     { to: '/my-deadlines', label: 'Return Deadlines', icon: Clock },
     { to: '/my-fines', label: 'My Fines', icon: Receipt },
-    { to: '/projects', label: 'Projects & Assign.', icon: FolderGit2 },
+    { to: '/projects', label: 'Academic Projects', icon: FolderGit2 },
     { to: '/my-submissions', label: 'My Submissions', icon: FileCheck2 },
     { to: '/notifications', label: 'Notifications', icon: Bell },
-    { to: '/profile', label: 'My Profile', icon: UserCircle },
+    { to: '/profile', label: 'My Profile & Password', icon: UserCircle },
   ];
 
   const facultyLinks = [
@@ -71,20 +83,13 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/my-fines', label: 'My Fines', icon: Receipt },
     { to: '/projects', label: 'Projects & Assign.', icon: FolderGit2 },
     { to: '/notifications', label: 'Notifications', icon: Bell },
-    { to: '/profile', label: 'My Profile', icon: UserCircle },
+    { to: '/profile', label: 'My Profile & Password', icon: UserCircle },
   ];
 
   let links = adminLinks;
   if (role === 'ROLE_LIBRARIAN') links = librarianLinks;
   else if (role === 'ROLE_STUDENT') links = studentLinks;
   else if (role === 'ROLE_FACULTY') links = facultyLinks;
-  if (role === 'ROLE_ADMIN') {
-    links = [
-      ...adminLinks.slice(0, 10),
-      { to: '/subject-head', label: 'Subject Head Desk', icon: Award },
-      ...adminLinks.slice(10)
-    ];
-  }
 
   return (
     <>

@@ -32,6 +32,7 @@ public class DashboardService {
     private final ProjectRepository projectRepository;
     private final ProjectSubmissionRepository submissionRepository;
     private final NotificationRepository notificationRepository;
+    private final BorrowRequestRepository borrowRequestRepository;
     private final BookService bookService;
     private final BorrowService borrowService;
     private final ProjectService projectService;
@@ -39,6 +40,7 @@ public class DashboardService {
 
     public DashboardService(BookRepository bookRepository,
                             BorrowTransactionRepository transactionRepository,
+                            BorrowRequestRepository borrowRequestRepository,
                             UserRepository userRepository,
                             StudentRepository studentRepository,
                             FacultyRepository facultyRepository,
@@ -52,6 +54,7 @@ public class DashboardService {
                             LibrarySettingService settingService) {
         this.bookRepository = bookRepository;
         this.transactionRepository = transactionRepository;
+        this.borrowRequestRepository = borrowRequestRepository;
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
@@ -82,6 +85,7 @@ public class DashboardService {
 
         response.setActiveStudents(userRepository.countByRoleNameAndIsActiveTrue("ROLE_STUDENT"));
         response.setActiveFaculty(userRepository.countByRoleNameAndIsActiveTrue("ROLE_FACULTY"));
+        response.setPendingBorrowRequests(borrowRequestRepository.countByStatus("PENDING"));
 
         response.setOutstandingFines(fineRepository.sumTotalOutstandingBalance());
         response.setFinesCollected(fineRepository.sumTotalFinesCollected());

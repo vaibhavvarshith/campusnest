@@ -5,10 +5,12 @@ import { NotificationProvider } from './context/NotificationContext';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import FirstLoginModal from './components/FirstLoginModal';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import Login from './pages/Login';
 import PortalLogin from './pages/PortalLogin';
 import AdminDashboard from './pages/AdminDashboard';
+import LibrarianDashboard from './pages/LibrarianDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
 import BookCatalog from './pages/BookCatalog';
@@ -19,6 +21,7 @@ import OverdueBooks from './pages/OverdueBooks';
 import FineManagement from './pages/FineManagement';
 import StudentsList from './pages/StudentsList';
 import FacultyList from './pages/FacultyList';
+import LibrariansList from './pages/LibrariansList';
 import ProjectsPage from './pages/ProjectsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ReportsPage from './pages/ReportsPage';
@@ -44,10 +47,11 @@ function ProtectedLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  // Dashboard component selection based on role
+  // Dashboard component selection strictly based on role
   const getDashboard = () => {
     if (user.role === 'ROLE_STUDENT') return <StudentDashboard />;
     if (user.role === 'ROLE_FACULTY') return <FacultyDashboard />;
+    if (user.role === 'ROLE_LIBRARIAN') return <LibrarianDashboard />;
     return <AdminDashboard />;
   };
 
@@ -56,29 +60,35 @@ function ProtectedLayout() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="main-content">
         <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-        <Routes>
-          <Route path="/" element={getDashboard()} />
-          <Route path="/books" element={<BookCatalog />} />
-          <Route path="/borrow-requests" element={<BorrowRequests />} />
-          <Route path="/issue-return" element={<IssueReturn />} />
-          <Route path="/borrow-history" element={<BorrowHistory />} />
-          <Route path="/my-books" element={<BorrowHistory />} />
-          <Route path="/my-deadlines" element={<StudentDashboard />} />
-          <Route path="/overdue" element={<OverdueBooks />} />
-          <Route path="/fines" element={<FineManagement />} />
-          <Route path="/my-fines" element={<FineManagement />} />
-          <Route path="/students" element={<StudentsList />} />
-          <Route path="/faculty" element={<FacultyList />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/projects/submissions" element={<ProjectsPage />} />
-          <Route path="/my-submissions" element={<ProjectsPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/subject-head" element={<SubjectHeadDashboard />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={getDashboard()} />
+            <Route path="/books" element={<BookCatalog />} />
+            <Route path="/borrow-requests" element={<BorrowRequests />} />
+            <Route path="/issue-return" element={<IssueReturn />} />
+            <Route path="/borrow-history" element={<BorrowHistory />} />
+            <Route path="/my-books" element={<BorrowHistory />} />
+            <Route path="/my-deadlines" element={<StudentDashboard />} />
+            <Route path="/overdue" element={<OverdueBooks />} />
+            <Route path="/fines" element={<FineManagement />} />
+            <Route path="/my-fines" element={<FineManagement />} />
+            <Route path="/students" element={<StudentsList />} />
+            <Route path="/faculty" element={<FacultyList />} />
+            <Route path="/librarians" element={user.role === 'ROLE_ADMIN' ? <LibrariansList /> : <Navigate to="/" replace />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/assignments" element={<ProjectsPage />} />
+            <Route path="/faculty-allocation" element={<SubjectHeadDashboard />} />
+            <Route path="/submissions" element={<ProjectsPage />} />
+            <Route path="/projects/submissions" element={<ProjectsPage />} />
+            <Route path="/my-submissions" element={<ProjectsPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/reports" element={user.role === 'ROLE_ADMIN' || user.role === 'ROLE_LIBRARIAN' ? <ReportsPage /> : <Navigate to="/" replace />} />
+            <Route path="/settings" element={user.role === 'ROLE_ADMIN' ? <SettingsPage /> : <Navigate to="/" replace />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/subject-head" element={<SubjectHeadDashboard />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </ErrorBoundary>
       </div>
       <FirstLoginModal />
     </div>
@@ -87,21 +97,23 @@ function ProtectedLayout() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <NotificationProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/admin/login" element={<PortalLogin portal="admin" />} />
-            <Route path="/librarian/login" element={<PortalLogin portal="librarian" />} />
-            <Route path="/student/login" element={<PortalLogin portal="student" />} />
-            <Route path="/faculty/login" element={<PortalLogin portal="faculty" />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/*" element={<ProtectedLayout />} />
-          </Routes>
-        </NotificationProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <NotificationProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/admin/login" element={<PortalLogin portal="admin" />} />
+              <Route path="/librarian/login" element={<PortalLogin portal="librarian" />} />
+              <Route path="/student/login" element={<PortalLogin portal="student" />} />
+              <Route path="/faculty/login" element={<PortalLogin portal="faculty" />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/*" element={<ProtectedLayout />} />
+            </Routes>
+          </NotificationProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
