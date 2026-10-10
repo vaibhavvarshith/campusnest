@@ -34,6 +34,9 @@ public class AutomatedReminderSchedulerTest {
     private StudentRepository studentRepository;
 
     @Mock
+    private com.campusnest.repository.ProjectSubmissionRepository submissionRepository;
+
+    @Mock
     private NotificationService notificationService;
 
     @InjectMocks
@@ -121,6 +124,8 @@ public class AutomatedReminderSchedulerTest {
                 .thenReturn(List.of(projectDueInTwoDays));
         when(studentRepository.findAll())
                 .thenReturn(List.of(student));
+        when(submissionRepository.existsByProjectIdAndStudentId(201L, 1L))
+                .thenReturn(false);
 
         reminderScheduler.scanAndGenerateProjectReminders(testDate);
 

@@ -28,6 +28,14 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("Login successful", response));
     }
 
+    @PostMapping({"/login/{portal}", "/{portal}/login"})
+    public ResponseEntity<ApiResponse<AuthResponse>> portalLogin(
+            @PathVariable String portal,
+            @Valid @RequestBody LoginRequest loginRequest) {
+        AuthResponse response = authService.portalLogin(loginRequest, portal);
+        return ResponseEntity.ok(ApiResponse.ok("Login successful", response));
+    }
+
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @AuthenticationPrincipal UserPrincipal principal,

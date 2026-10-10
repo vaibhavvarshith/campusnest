@@ -7,10 +7,12 @@ import Sidebar from './components/Sidebar';
 import FirstLoginModal from './components/FirstLoginModal';
 
 import Login from './pages/Login';
+import PortalLogin from './pages/PortalLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
 import BookCatalog from './pages/BookCatalog';
+import BorrowRequests from './pages/BorrowRequests';
 import IssueReturn from './pages/IssueReturn';
 import BorrowHistory from './pages/BorrowHistory';
 import OverdueBooks from './pages/OverdueBooks';
@@ -54,6 +56,7 @@ function ProtectedLayout() {
         <Routes>
           <Route path="/" element={getDashboard()} />
           <Route path="/books" element={<BookCatalog />} />
+          <Route path="/borrow-requests" element={<BorrowRequests />} />
           <Route path="/issue-return" element={<IssueReturn />} />
           <Route path="/borrow-history" element={<BorrowHistory />} />
           <Route path="/my-books" element={<BorrowHistory />} />
@@ -85,6 +88,10 @@ export default function App() {
         <NotificationProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/admin/login" element={<PortalLogin portal="admin" />} />
+            <Route path="/librarian/login" element={<PortalLogin portal="librarian" />} />
+            <Route path="/student/login" element={<PortalLogin portal="student" />} />
+            <Route path="/faculty/login" element={<PortalLogin portal="faculty" />} />
             <Route path="/*" element={<ProtectedLayout />} />
           </Routes>
         </NotificationProvider>

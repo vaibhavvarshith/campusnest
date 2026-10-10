@@ -27,8 +27,8 @@ public class FineController {
         this.fineService = fineService;
     }
 
-    @GetMapping("/admin/fines")
-    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping({"/admin/fines", "/librarian/fines", "/fines"})
+    @PreAuthorize("hasAnyRole('LIBRARIAN', 'ADMIN')")
     public ResponseEntity<ApiResponse<PagedResponse<FineResponse>>> getFines(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String query,
@@ -40,17 +40,32 @@ public class FineController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    @PostMapping("/admin/fines/pay")
-    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping({"/admin/fines/outstanding", "/fines/outstanding"})
+    @PreAuthorize("hasAnyRole('LIBRARIAN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<PagedResponse<FineResponse>>> getOutstandingFines(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PagedResponse<FineResponse> response = fineService.searchFines(
+                "UNPAID", null, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "assessedDate"))
+        );
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PostMapping({"/admin/fines/pay", "/librarian/fines/pay", "/fines/pay", "/fines/{id}/pay"})
+    @PreAuthorize("hasAnyRole('LIBRARIAN', 'ADMIN')")
     public ResponseEntity<ApiResponse<FineResponse>> recordPayment(
+            @PathVariable(required = false) Long id,
             @Valid @RequestBody PaymentRequest request,
             @AuthenticationPrincipal UserPrincipal adminPrincipal) {
+        if (id != null) {
+            request.setFineId(id);
+        }
         FineResponse response = fineService.recordPayment(request, adminPrincipal);
         return ResponseEntity.ok(ApiResponse.ok("Payment recorded successfully", response));
     }
 
-    @GetMapping("/admin/fines/{id}/payments")
-    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping({"/admin/fines/{id}/payments", "/librarian/fines/{id}/payments", "/fines/{id}/payments"})
+    @PreAuthorize("hasAnyRole('LIBRARIAN', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<FinePayment>>> getFinePayments(@PathVariable Long id) {
         List<FinePayment> payments = fineService.getFinePayments(id);
         return ResponseEntity.ok(ApiResponse.ok(payments));

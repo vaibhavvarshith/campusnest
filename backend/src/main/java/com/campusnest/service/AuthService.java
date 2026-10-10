@@ -88,6 +88,35 @@ public class AuthService {
         return response;
     }
 
+    public AuthResponse portalLogin(LoginRequest loginRequest, String portal) {
+        AuthResponse response = login(loginRequest);
+        String role = response.getRole();
+
+        if ("admin".equalsIgnoreCase(portal)) {
+            if (!"ROLE_ADMIN".equals(role)) {
+                throw new com.campusnest.exception.UnauthorizedException(
+                        "Access Denied: Only administrators can sign in through the Admin Portal.");
+            }
+        } else if ("librarian".equalsIgnoreCase(portal)) {
+            if (!"ROLE_LIBRARIAN".equals(role) && !"ROLE_ADMIN".equals(role)) {
+                throw new com.campusnest.exception.UnauthorizedException(
+                        "Access Denied: Only library staff can sign in through the Librarian Portal.");
+            }
+        } else if ("student".equalsIgnoreCase(portal)) {
+            if (!"ROLE_STUDENT".equals(role)) {
+                throw new com.campusnest.exception.UnauthorizedException(
+                        "Access Denied: Only registered students can sign in through the Student Portal.");
+            }
+        } else if ("faculty".equalsIgnoreCase(portal)) {
+            if (!"ROLE_FACULTY".equals(role)) {
+                throw new com.campusnest.exception.UnauthorizedException(
+                        "Access Denied: Only authorized faculty members can sign in through the Faculty Portal.");
+            }
+        }
+
+        return response;
+    }
+
     @Transactional
     public void changePassword(UserPrincipal principal, PasswordChangeRequest request) {
         User user = userRepository.findById(principal.getId())

@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS students (
     department VARCHAR(100) NOT NULL,
     course VARCHAR(100) NOT NULL,
     academic_year VARCHAR(20) NOT NULL,
+    semester INT NOT NULL DEFAULT 6,
+    section VARCHAR(10) NOT NULL DEFAULT 'A',
     date_of_birth DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -53,6 +55,7 @@ CREATE TABLE IF NOT EXISTS students (
 
 CREATE INDEX idx_students_reg_no ON students (registration_number);
 CREATE INDEX idx_students_dept ON students (department);
+CREATE INDEX idx_students_year_sem ON students (academic_year, semester, section);
 
 -- 4. Faculty Table
 CREATE TABLE IF NOT EXISTS faculty (
@@ -112,7 +115,28 @@ CREATE TABLE IF NOT EXISTS library_settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 8. Borrow Transactions Table
+-- 8. Borrow Requests Table
+CREATE TABLE IF NOT EXISTS borrow_requests (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    book_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    request_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    admin_notes TEXT NULL,
+    processed_by_admin_id BIGINT NULL,
+    processed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_req_book FOREIGN KEY (book_id) REFERENCES books (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_req_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_req_admin FOREIGN KEY (processed_by_admin_id) REFERENCES users (id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_req_user ON borrow_requests (user_id);
+CREATE INDEX idx_req_book ON borrow_requests (book_id);
+CREATE INDEX idx_req_status ON borrow_requests (status);
+
+-- 9. Borrow Transactions Table
 CREATE TABLE IF NOT EXISTS borrow_transactions (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     book_id BIGINT NOT NULL,
@@ -183,6 +207,12 @@ CREATE TABLE IF NOT EXISTS projects (
     description TEXT NOT NULL,
     department VARCHAR(100) NOT NULL,
     course VARCHAR(100) NOT NULL,
+    academic_year VARCHAR(30) NOT NULL DEFAULT 'Third Year',
+    semester INT NOT NULL DEFAULT 6,
+    section VARCHAR(20) NOT NULL DEFAULT 'A',
+    instructions TEXT NULL,
+    submission_format VARCHAR(100) NOT NULL DEFAULT 'GitHub Repository / PDF Report',
+    attachment_url VARCHAR(255) NULL,
     start_date DATE NOT NULL,
     due_date DATE NOT NULL,
     status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
@@ -192,7 +222,7 @@ CREATE TABLE IF NOT EXISTS projects (
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_projects_faculty ON projects (faculty_id);
-CREATE INDEX idx_projects_dept_course ON projects (department, course);
+CREATE INDEX idx_projects_dept_group ON projects (department, academic_year, semester, section);
 CREATE INDEX idx_projects_due_date ON projects (due_date);
 
 -- 12. Project Submissions Table

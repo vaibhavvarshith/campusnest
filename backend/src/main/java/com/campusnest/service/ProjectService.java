@@ -52,6 +52,12 @@ public class ProjectService {
         project.setDescription(request.getDescription());
         project.setDepartment(request.getDepartment());
         project.setCourse(request.getCourse());
+        project.setAcademicYear(request.getAcademicYear() != null && !request.getAcademicYear().isBlank() ? request.getAcademicYear() : "Third Year");
+        project.setSemester(request.getSemester() != null ? request.getSemester() : 6);
+        project.setSection(request.getSection() != null && !request.getSection().isBlank() ? request.getSection() : "A");
+        project.setInstructions(request.getInstructions());
+        project.setSubmissionFormat(request.getSubmissionFormat() != null && !request.getSubmissionFormat().isBlank() ? request.getSubmissionFormat() : "GitHub Repository / PDF Report");
+        project.setAttachmentUrl(request.getAttachmentUrl());
         project.setStartDate(request.getStartDate());
         project.setDueDate(request.getDueDate());
         project.setStatus("ACTIVE");
@@ -76,6 +82,24 @@ public class ProjectService {
         project.setDescription(request.getDescription());
         project.setDepartment(request.getDepartment());
         project.setCourse(request.getCourse());
+        if (request.getAcademicYear() != null && !request.getAcademicYear().isBlank()) {
+            project.setAcademicYear(request.getAcademicYear());
+        }
+        if (request.getSemester() != null) {
+            project.setSemester(request.getSemester());
+        }
+        if (request.getSection() != null && !request.getSection().isBlank()) {
+            project.setSection(request.getSection());
+        }
+        if (request.getInstructions() != null) {
+            project.setInstructions(request.getInstructions());
+        }
+        if (request.getSubmissionFormat() != null) {
+            project.setSubmissionFormat(request.getSubmissionFormat());
+        }
+        if (request.getAttachmentUrl() != null) {
+            project.setAttachmentUrl(request.getAttachmentUrl());
+        }
         project.setStartDate(request.getStartDate());
         project.setDueDate(request.getDueDate());
 
@@ -84,11 +108,17 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public PagedResponse<ProjectResponse> getFacultyProjects(UserPrincipal facultyPrincipal, Pageable pageable) {
+    public PagedResponse<ProjectResponse> getFacultyProjects(UserPrincipal facultyPrincipal,
+                                                            String academicYear,
+                                                            Integer semester,
+                                                            String section,
+                                                            Pageable pageable) {
         Faculty faculty = facultyRepository.findByUserId(facultyPrincipal.getId())
                 .orElseThrow(() -> new UnauthorizedException("Faculty profile not found"));
 
-        Page<Project> page = projectRepository.findByFacultyId(faculty.getId(), pageable);
+        Page<Project> page = projectRepository.findByFacultyIdAndFilters(
+                faculty.getId(), academicYear, semester, section, pageable
+        );
         List<ProjectResponse> responses = page.getContent().stream()
                 .map(p -> mapToResponse(p, null))
                 .toList();
@@ -101,8 +131,13 @@ public class ProjectService {
         Student student = studentRepository.findByUserId(studentPrincipal.getId())
                 .orElseThrow(() -> new UnauthorizedException("Student profile not found"));
 
-        Page<Project> page = projectRepository.findByDepartmentAndCourse(
-                student.getDepartment(), student.getCourse(), pageable
+        // Enforce student group restriction: department, academicYear, semester, section
+        Page<Project> page = projectRepository.findByStudentGroup(
+                student.getDepartment(),
+                student.getAcademicYear(),
+                student.getSemester(),
+                student.getSection(),
+                pageable
         );
 
         List<ProjectResponse> responses = page.getContent().stream()
@@ -143,15 +178,30 @@ public class ProjectService {
         submission.setStudent(student);
         submission.setSubmissionDate(LocalDateTime.now());
         submission.setSubmissionText(request.getSubmissionText());
-        if (request.getFileUrl() != null) {
-            submission.setFileUrl(request.getFileUrl());
-            submission.setFileName(request.getFileName());
-            submission.setFileSize(request.getFileSize());
-        }
+        submission.setFileUrl(request.getFileUrl());
+        submission.setFileName(request.getFileName());
+        submission.setFileSize(request.getFileSize());
         submission.setStatus(status);
 
         ProjectSubmission saved = submissionRepository.save(submission);
         return mapToSubmissionResponse(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubmissionResponse> getProjectSubmissions(Long projectId, UserPrincipal facultyPrincipal) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
+
+        Faculty faculty = facultyRepository.findByUserId(facultyPrincipal.getId())
+                .orElseThrow(() -> new UnauthorizedException("Only faculty can view submissions"));
+
+        if (!project.getFaculty().getId().equals(faculty.getId()) && !"ROLE_ADMIN".equals(facultyPrincipal.getRole())) {
+            throw new UnauthorizedException("You do not have access to these submissions");
+        }
+
+        return submissionRepository.findByProjectId(projectId).stream()
+                .map(this::mapToSubmissionResponse)
+                .toList();
     }
 
     @Transactional
@@ -160,10 +210,10 @@ public class ProjectService {
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found with id: " + submissionId));
 
         Faculty faculty = facultyRepository.findByUserId(facultyPrincipal.getId())
-                .orElseThrow(() -> new UnauthorizedException("Faculty profile not found"));
+                .orElseThrow(() -> new UnauthorizedException("Only faculty can grade submissions"));
 
         if (!submission.getProject().getFaculty().getId().equals(faculty.getId()) && !"ROLE_ADMIN".equals(facultyPrincipal.getRole())) {
-            throw new UnauthorizedException("You are not authorized to grade this submission");
+            throw new UnauthorizedException("You do not have permission to grade this submission");
         }
 
         submission.setGrade(request.getGrade());
@@ -175,27 +225,7 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public PagedResponse<SubmissionResponse> getSubmissionsForProject(Long projectId, UserPrincipal facultyPrincipal, Pageable pageable) {
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
-
-        Faculty faculty = facultyRepository.findByUserId(facultyPrincipal.getId())
-                .orElseThrow(() -> new UnauthorizedException("Faculty profile not found"));
-
-        if (!project.getFaculty().getId().equals(faculty.getId()) && !"ROLE_ADMIN".equals(facultyPrincipal.getRole())) {
-            throw new UnauthorizedException("You are not authorized to view submissions for this project");
-        }
-
-        Page<ProjectSubmission> page = submissionRepository.findByProjectId(projectId, pageable);
-        List<SubmissionResponse> responses = page.getContent().stream()
-                .map(this::mapToSubmissionResponse)
-                .toList();
-
-        return PagedResponse.of(responses, page);
-    }
-
-    @Transactional(readOnly = true)
-    public List<SubmissionResponse> getStudentSubmissions(UserPrincipal studentPrincipal) {
+    public List<SubmissionResponse> getMySubmissions(UserPrincipal studentPrincipal) {
         Student student = studentRepository.findByUserId(studentPrincipal.getId())
                 .orElseThrow(() -> new UnauthorizedException("Student profile not found"));
 
@@ -214,6 +244,12 @@ public class ProjectService {
         r.setDescription(project.getDescription());
         r.setDepartment(project.getDepartment());
         r.setCourse(project.getCourse());
+        r.setAcademicYear(project.getAcademicYear());
+        r.setSemester(project.getSemester());
+        r.setSection(project.getSection());
+        r.setInstructions(project.getInstructions());
+        r.setSubmissionFormat(project.getSubmissionFormat());
+        r.setAttachmentUrl(project.getAttachmentUrl());
         r.setStartDate(project.getStartDate());
         r.setDueDate(project.getDueDate());
         r.setStatus(project.getStatus());
@@ -229,6 +265,15 @@ public class ProjectService {
         r.setTotalSubmissions(totalSubs);
         r.setReviewedSubmissions(reviewedSubs);
 
+        // Calculate assigned student count
+        long assignedCount = studentRepository.findByDepartment(project.getDepartment()).stream()
+                .filter(s -> (project.getAcademicYear() == null || project.getAcademicYear().equalsIgnoreCase("All") || project.getAcademicYear().equalsIgnoreCase(s.getAcademicYear())) &&
+                             (project.getSemester() == null || project.getSemester() == 0 || project.getSemester().equals(s.getSemester())) &&
+                             (project.getSection() == null || project.getSection().equalsIgnoreCase("All") || project.getSection().equalsIgnoreCase(s.getSection())))
+                .count();
+        r.setAssignedStudentCount(assignedCount > 0 ? assignedCount : totalSubs);
+        r.setPendingSubmissions(Math.max(0, r.getAssignedStudentCount() - totalSubs));
+
         if (currentStudent != null) {
             submissionRepository.findByProjectIdAndStudentId(project.getId(), currentStudent.getId())
                     .ifPresent(s -> {
@@ -237,6 +282,7 @@ public class ProjectService {
                     });
             if (r.getStudentSubmitted() == null) {
                 r.setStudentSubmitted(false);
+                r.setStudentSubmissionStatus(r.getIsOverdue() ? "OVERDUE" : "PENDING");
             }
         }
 

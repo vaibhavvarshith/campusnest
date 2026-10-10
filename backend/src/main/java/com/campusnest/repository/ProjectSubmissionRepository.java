@@ -20,6 +20,8 @@ public interface ProjectSubmissionRepository extends JpaRepository<ProjectSubmis
 
     Optional<ProjectSubmission> findByProjectIdAndStudentId(Long projectId, Long studentId);
 
+    boolean existsByProjectIdAndStudentId(Long projectId, Long studentId);
+
     long countByProjectId(Long projectId);
 
     long countByProjectIdAndStatus(Long projectId, String status);

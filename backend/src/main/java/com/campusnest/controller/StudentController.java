@@ -14,8 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/admin/students")
-@PreAuthorize("hasRole('ADMIN')")
+@RequestMapping("/api")
 public class StudentController {
 
     private final StudentService studentService;
@@ -24,31 +23,40 @@ public class StudentController {
         this.studentService = studentService;
     }
 
-    @GetMapping
+    @GetMapping({"/students", "/admin/students"})
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<ApiResponse<PagedResponse<UserResponse>>> getStudents(
+            @RequestParam(required = false) String academicYear,
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) Integer semester,
+            @RequestParam(required = false) String section,
             @RequestParam(required = false) String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        PagedResponse<UserResponse> students = studentService.searchStudents(
-                query, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        PagedResponse<UserResponse> students = studentService.filterStudents(
+                academicYear, department, semester, section, query,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
         );
         return ResponseEntity.ok(ApiResponse.ok(students));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping({"/students/{id}", "/admin/students/{id}"})
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<ApiResponse<UserResponse>> getStudentById(@PathVariable Long id) {
         UserResponse response = studentService.getStudentById(id);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    @PostMapping
+    @PostMapping({"/students", "/admin/students"})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> registerStudent(
             @Valid @RequestBody StudentRegistrationRequest request) {
         UserResponse created = studentService.registerStudent(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Student registered successfully", created));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping({"/students/{id}", "/admin/students/{id}"})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> updateStudent(
             @PathVariable Long id,
             @Valid @RequestBody StudentRegistrationRequest request) {
@@ -56,15 +64,17 @@ public class StudentController {
         return ResponseEntity.ok(ApiResponse.ok("Student updated successfully", updated));
     }
 
-    @PatchMapping("/{id}/toggle-status")
+    @PatchMapping({"/students/{id}/toggle-status", "/admin/students/{id}/toggle-status"})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> toggleStatus(@PathVariable Long id) {
         studentService.toggleStudentStatus(id);
-        return ResponseEntity.ok(ApiResponse.ok("Student status toggled successfully", null));
+        return ResponseEntity.ok(ApiResponse.ok("Student account status updated", null));
     }
 
-    @PostMapping("/{id}/reset-password")
+    @PostMapping({"/students/{id}/reset-password", "/admin/students/{id}/reset-password"})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> resetPassword(@PathVariable Long id) {
         studentService.resetStudentPassword(id);
-        return ResponseEntity.ok(ApiResponse.ok("Student credentials reset to initial DOB password", null));
+        return ResponseEntity.ok(ApiResponse.ok("Student password reset to Date of Birth (DDMMYYYY)", null));
     }
 }

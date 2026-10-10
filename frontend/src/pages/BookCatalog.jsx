@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
-import Badge from '../components/Badge';
 import {
   Search,
   Filter,
@@ -13,11 +12,18 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  Clock,
+  BookmarkCheck,
+  Check,
+  X,
+  AlertCircle,
+  Send,
 } from 'lucide-react';
 
 export default function BookCatalog() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'ROLE_ADMIN';
+  const isAdminOrLibrarian = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_LIBRARIAN';
+  const isPatron = user?.role === 'ROLE_STUDENT' || user?.role === 'ROLE_FACULTY';
 
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -31,9 +37,16 @@ export default function BookCatalog() {
   const [selectedCat, setSelectedCat] = useState('');
   const [availability, setAvailability] = useState('');
 
-  // Modals
+  // Modals & Feedback
   const [selectedBook, setSelectedBook] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+  const [borrowLoadingId, setBorrowLoadingId] = useState(null);
+
+  // User borrow states
+  const [pendingBookIds, setPendingBookIds] = useState(new Set());
+  const [borrowedBookIds, setBorrowedBookIds] = useState(new Set());
+
   const [newBook, setNewBook] = useState({
     isbn: '',
     title: '',
@@ -50,6 +63,9 @@ export default function BookCatalog() {
 
   useEffect(() => {
     fetchCategories();
+    if (isPatron) {
+      fetchUserBorrowStates();
+    }
   }, []);
 
   useEffect(() => {
@@ -64,6 +80,36 @@ export default function BookCatalog() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const fetchUserBorrowStates = async () => {
+    try {
+      // 1. Fetch user's pending requests
+      const reqRes = await api.get('/borrow-requests/my');
+      if (reqRes.success && reqRes.data) {
+        const pending = new Set();
+        (reqRes.data.content || []).forEach((r) => {
+          if (r.status === 'PENDING') {
+            pending.add(r.bookId);
+          }
+        });
+        setPendingBookIds(pending);
+      }
+
+      // 2. Fetch user's currently borrowed books
+      const activeRes = await api.get('/borrow/my-books');
+      if (activeRes.success && activeRes.data) {
+        const borrowed = new Set();
+        (activeRes.data.content || []).forEach((t) => {
+          if (t.status === 'ISSUED' && t.bookId) {
+            borrowed.add(t.bookId);
+          }
+        });
+        setBorrowedBookIds(borrowed);
+      }
+    } catch (err) {
+      console.error('Failed to fetch user borrowing states:', err);
     }
   };
 
@@ -95,12 +141,34 @@ export default function BookCatalog() {
     fetchBooks();
   };
 
+  const handleRequestBorrow = async (book, e) => {
+    if (e) e.stopPropagation();
+
+    if (!user) {
+      alert('Please sign in to request books.');
+      return;
+    }
+
+    try {
+      setBorrowLoadingId(book.id);
+      const res = await api.post('/borrow-requests', { bookId: book.id });
+      if (res.success) {
+        setToastMessage(`Your request for "${book.title}" has been submitted successfully.`);
+        setPendingBookIds((prev) => new Set([...prev, book.id]));
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to submit borrow request.');
+    } finally {
+      setBorrowLoadingId(null);
+    }
+  };
+
   const handleCreateBook = async (e) => {
     e.preventDefault();
     setFormError('');
     setSubmitting(true);
     try {
-      const res = await api.post('/admin/books', newBook);
+      const res = await api.post('/books', newBook);
       if (res.success) {
         setIsAddModalOpen(false);
         setNewBook({
@@ -114,6 +182,7 @@ export default function BookCatalog() {
           totalCopies: 5,
           coverImage: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&auto=format&fit=crop&q=60',
         });
+        setToastMessage(`Book "${newBook.title}" added to catalogue.`);
         fetchBooks();
       }
     } catch (err) {
@@ -123,21 +192,118 @@ export default function BookCatalog() {
     }
   };
 
+  // Helper to render book action button based on live state
+  const renderBorrowButton = (b, isModal = false) => {
+    if (isAdminOrLibrarian) {
+      return (
+        <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>
+          {b.availableCopies} in stock
+        </span>
+      );
+    }
+
+    const isBorrowed = borrowedBookIds.has(b.id);
+    const isPending = pendingBookIds.has(b.id);
+    const isAvailable = b.availableCopies > 0;
+    const isLoading = borrowLoadingId === b.id;
+
+    if (isBorrowed) {
+      return (
+        <span
+          className="badge badge-info"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px' }}
+        >
+          <BookmarkCheck size={14} /> Currently Borrowed
+        </span>
+      );
+    }
+
+    if (isPending) {
+      return (
+        <span
+          className="badge badge-warning"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px' }}
+        >
+          <Clock size={14} /> Request Pending
+        </span>
+      );
+    }
+
+    if (!isAvailable) {
+      return (
+        <button
+          className="btn btn-secondary btn-sm"
+          disabled
+          style={{ cursor: 'not-allowed', opacity: 0.65 }}
+          title="All physical copies are currently borrowed"
+        >
+          Currently Unavailable
+        </button>
+      );
+    }
+
+    return (
+      <button
+        onClick={(e) => handleRequestBorrow(b, e)}
+        className="btn btn-primary btn-sm"
+        disabled={isLoading}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontWeight: 600,
+          backgroundColor: '#0F9D8A',
+          borderColor: '#0F9D8A',
+        }}
+      >
+        <Send size={14} />
+        {isLoading ? 'Submitting...' : 'Request to Borrow'}
+      </button>
+    );
+  };
+
   return (
     <div className="page-container">
       <div className="page-header">
         <div>
           <h1 className="page-title">Book Catalogue</h1>
           <p className="page-subtitle">
-            Browse {totalElements} books across academic engineering & science departments
+            Browse {totalElements} engineering, science, and academic books across campus departments
           </p>
         </div>
-        {isAdmin && (
+        {isAdminOrLibrarian && (
           <button onClick={() => setIsAddModalOpen(true)} className="btn btn-primary">
             <Plus size={18} /> Add New Book
           </button>
         )}
       </div>
+
+      {toastMessage && (
+        <div
+          style={{
+            backgroundColor: '#DCFCE7',
+            border: '1px solid #86EFAC',
+            color: '#15803D',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
+            <CheckCircle size={18} />
+            <span>{toastMessage}</span>
+          </div>
+          <button
+            onClick={() => setToastMessage(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803D' }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div
@@ -158,7 +324,7 @@ export default function BookCatalog() {
               type="text"
               className="form-input"
               style={{ paddingLeft: '38px' }}
-              placeholder="Search by title, author, or ISBN..."
+              placeholder="Search title, author, or ISBN..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -168,10 +334,11 @@ export default function BookCatalog() {
           </button>
         </form>
 
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <Filter size={18} color="#64748B" />
           <select
             className="form-select"
-            style={{ width: 'auto', minWidth: '180px' }}
+            style={{ width: '210px' }}
             value={selectedCat}
             onChange={(e) => {
               setSelectedCat(e.target.value);
@@ -188,15 +355,15 @@ export default function BookCatalog() {
 
           <select
             className="form-select"
-            style={{ width: 'auto', minWidth: '150px' }}
+            style={{ width: '150px' }}
             value={availability}
             onChange={(e) => {
               setAvailability(e.target.value);
               setPage(0);
             }}
           >
-            <option value="">All Availability</option>
-            <option value="available">Available Copies</option>
+            <option value="">Availability</option>
+            <option value="available">In Stock</option>
             <option value="unavailable">Out of Stock</option>
           </select>
         </div>
@@ -217,7 +384,7 @@ export default function BookCatalog() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
             gap: '20px',
             marginBottom: '28px',
           }}
@@ -233,22 +400,16 @@ export default function BookCatalog() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  cursor: 'pointer',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: 'var(--shadow-sm)',
                   transition: 'transform 0.15s, box-shadow 0.15s',
-                }}
-                onClick={() => setSelectedBook(b)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-3px)';
-                  e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                  padding: '20px',
                 }}
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#2563EB' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       {b.categoryName}
                     </span>
                     <span className={`badge ${isAvail ? 'badge-success' : 'badge-danger'}`}>
@@ -258,25 +419,25 @@ export default function BookCatalog() {
 
                   <h3
                     style={{
-                      fontSize: '1rem',
+                      fontSize: '1.05rem',
                       fontWeight: 700,
                       color: '#142D4E',
-                      lineHeight: 1.3,
-                      marginBottom: '6px',
+                      lineHeight: 1.35,
+                      marginBottom: '4px',
                     }}
                   >
                     {b.title}
                   </h3>
 
-                  <div style={{ fontSize: '0.85rem', color: '#64748B', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#64748B', marginBottom: '12px', fontWeight: 500 }}>
                     by {b.author}
                   </div>
 
                   <p
                     style={{
-                      fontSize: '0.8rem',
+                      fontSize: '0.82rem',
                       color: '#64748B',
-                      lineHeight: 1.4,
+                      lineHeight: 1.45,
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
@@ -288,21 +449,36 @@ export default function BookCatalog() {
                   </p>
                 </div>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    borderTop: '1px solid #F1F5F9',
-                    paddingTop: '12px',
-                    fontSize: '0.78rem',
-                    color: '#94A3B8',
-                  }}
-                >
-                  <span>ISBN: {b.isbn}</span>
-                  <span style={{ fontWeight: 600, color: '#142D4E' }}>
-                    {b.availableCopies} / {b.totalCopies} copies
-                  </span>
+                <div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      borderTop: '1px solid #F1F5F9',
+                      paddingTop: '12px',
+                      marginBottom: '14px',
+                      fontSize: '0.78rem',
+                      color: '#94A3B8',
+                    }}
+                  >
+                    <span>ISBN: {b.isbn}</span>
+                    <span style={{ fontWeight: 600, color: '#142D4E' }}>
+                      {b.availableCopies} / {b.totalCopies} copies
+                    </span>
+                  </div>
+
+                  {/* Actions Row */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <button
+                      onClick={() => setSelectedBook(b)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '0.82rem' }}
+                    >
+                      <Info size={14} /> View Details
+                    </button>
+                    {renderBorrowButton(b)}
+                  </div>
                 </div>
               </div>
             );
@@ -321,7 +497,7 @@ export default function BookCatalog() {
             <ChevronLeft size={16} /> Previous
           </button>
           <span style={{ fontSize: '0.88rem', color: '#64748B' }}>
-            Page <strong>{page + 1}</strong> of <strong>{totalPages}</strong>
+            Page <strong>{page + 1}</strong> of <strong>{totalPages}</strong> ({totalElements} books)
           </span>
           <button
             className="btn btn-secondary btn-sm"
@@ -344,38 +520,39 @@ export default function BookCatalog() {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
               <span className="badge badge-info">{selectedBook.categoryName}</span>
               <span className={`badge ${selectedBook.availableCopies > 0 ? 'badge-success' : 'badge-danger'}`}>
-                {selectedBook.availableCopies > 0 ? `${selectedBook.availableCopies} Copies Available` : 'All Copies Borrowed'}
+                {selectedBook.availableCopies > 0 ? `${selectedBook.availableCopies} Copies Available` : 'All Copies Issued Out'}
               </span>
             </div>
 
-            <div style={{ marginBottom: '16px', fontSize: '0.9rem', color: '#142D4E' }}>
-              <div><strong>Author:</strong> {selectedBook.author}</div>
+            <div style={{ marginBottom: '16px', fontSize: '0.9rem', color: '#142D4E', lineHeight: 1.6 }}>
+              <div><strong>Author(s):</strong> {selectedBook.author}</div>
               <div><strong>Publisher:</strong> {selectedBook.publisher} ({selectedBook.publicationYear})</div>
               <div><strong>ISBN:</strong> {selectedBook.isbn}</div>
-              <div><strong>Copies Inventory:</strong> {selectedBook.availableCopies} available out of {selectedBook.totalCopies} physical copies</div>
+              <div><strong>Inventory Status:</strong> {selectedBook.availableCopies} available of {selectedBook.totalCopies} total copies</div>
             </div>
 
             <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginBottom: '20px' }}>
-              <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#142D4E', marginBottom: '6px' }}>Summary</h4>
+              <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#142D4E', marginBottom: '6px' }}>Course Summary</h4>
               <p style={{ fontSize: '0.85rem', color: '#64748B', lineHeight: 1.5 }}>{selectedBook.description}</p>
             </div>
 
-            {isAdmin && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setSelectedBook(null)}
-                >
-                  Close
-                </button>
-              </div>
-            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setSelectedBook(null)}
+              >
+                Close
+              </button>
+
+              {renderBorrowButton(selectedBook, true)}
+            </div>
           </div>
         )}
       </Modal>
 
-      {/* Add New Book Modal (Admin Only) */}
-      {isAdmin && (
+      {/* Add New Book Modal (Admin / Librarian) */}
+      {isAdminOrLibrarian && (
         <Modal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}

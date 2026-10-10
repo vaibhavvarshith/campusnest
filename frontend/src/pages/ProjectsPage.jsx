@@ -15,6 +15,11 @@ import {
   GraduationCap,
   MessageSquare,
   Award,
+  Link as LinkIcon,
+  Filter,
+  FileText,
+  Users,
+  Check,
 } from 'lucide-react';
 
 export default function ProjectsPage() {
@@ -26,6 +31,11 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Filters for Faculty / Admin
+  const [filterYear, setFilterYear] = useState('All');
+  const [filterSem, setFilterSem] = useState('All');
+  const [filterSection, setFilterSection] = useState('All');
+
   // Create Project Modal (Faculty/Admin)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [projectForm, setProjectForm] = useState({
@@ -33,6 +43,12 @@ export default function ProjectsPage() {
     description: '',
     department: user?.department || 'Computer Science & Engineering',
     course: 'B.Tech CSE',
+    academicYear: 'Third Year',
+    semester: 6,
+    section: 'A',
+    submissionFormat: 'GitHub Repository / PDF Report',
+    instructions: '',
+    attachmentUrl: '',
     startDate: new Date().toISOString().split('T')[0],
     dueDate: '',
   });
@@ -56,16 +72,18 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects();
-  }, [user]);
+  }, [user, filterYear, filterSem, filterSection]);
 
   const fetchProjects = async () => {
     setLoading(true);
     try {
       let endpoint = '/student/projects?page=0&size=50';
-      if (isFaculty) {
-        endpoint = '/faculty/projects?page=0&size=50';
-      } else if (isAdmin) {
-        endpoint = '/faculty/projects?page=0&size=50';
+      if (isFaculty || isAdmin) {
+        let queryParams = new URLSearchParams({ page: 0, size: 50 });
+        if (filterYear !== 'All') queryParams.append('academicYear', filterYear);
+        if (filterSem !== 'All') queryParams.append('semester', filterSem);
+        if (filterSection !== 'All') queryParams.append('section', filterSection);
+        endpoint = `/faculty/projects?${queryParams.toString()}`;
       }
 
       const res = await api.get(endpoint);
@@ -84,7 +102,11 @@ export default function ProjectsPage() {
     setModalError('');
     setSubmitting(true);
     try {
-      const res = await api.post('/faculty/projects', projectForm);
+      const payload = {
+        ...projectForm,
+        semester: projectForm.semester ? parseInt(projectForm.semester, 10) : null,
+      };
+      const res = await api.post('/faculty/projects', payload);
       if (res.success) {
         setIsCreateModalOpen(false);
         setToast('Academic project created successfully!');
@@ -93,6 +115,12 @@ export default function ProjectsPage() {
           description: '',
           department: user?.department || 'Computer Science & Engineering',
           course: 'B.Tech CSE',
+          academicYear: 'Third Year',
+          semester: 6,
+          section: 'A',
+          submissionFormat: 'GitHub Repository / PDF Report',
+          instructions: '',
+          attachmentUrl: '',
           startDate: new Date().toISOString().split('T')[0],
           dueDate: '',
         });
@@ -138,11 +166,11 @@ export default function ProjectsPage() {
     try {
       const res = await api.get(`/faculty/projects/${project.id}/submissions`);
       if (res.success && res.data) {
-        setCurrentSubmissions(res.data.content || []);
+        setCurrentSubmissions(Array.isArray(res.data) ? res.data : (res.data.content || []));
         setIsReviewModalOpen(true);
       }
     } catch (err) {
-      alert(err.message);
+      alert(err.message || 'Failed to fetch submissions');
     }
   };
 
@@ -159,12 +187,12 @@ export default function ProjectsPage() {
         // Refresh submissions
         const refresh = await api.get(`/faculty/projects/${selectedProject.id}/submissions`);
         if (refresh.success && refresh.data) {
-          setCurrentSubmissions(refresh.data.content || []);
+          setCurrentSubmissions(Array.isArray(refresh.data) ? refresh.data : (refresh.data.content || []));
         }
         fetchProjects();
       }
     } catch (err) {
-      alert(err.message);
+      alert(err.message || 'Failed to submit grade');
     }
   };
 
@@ -176,7 +204,7 @@ export default function ProjectsPage() {
           <p className="page-subtitle">
             {isStudent
               ? 'View course assignments, track submission deadlines, and upload your academic deliverables'
-              : 'Create course projects, manage submission deadlines, and review student deliverables'}
+              : 'Create course projects, target student academic groups, manage deadlines, and evaluate submissions'}
           </p>
         </div>
 
@@ -194,6 +222,75 @@ export default function ProjectsPage() {
         </div>
       )}
 
+      {/* Faculty Group Filters */}
+      {(isFaculty || isAdmin) && (
+        <div className="card" style={{ padding: '14px 20px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#142D4E', fontWeight: 600, fontSize: '0.9rem' }}>
+            <Filter size={18} color="#2563EB" /> Filter by Target Group:
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 500 }}>Academic Year:</label>
+            <select
+              className="form-select"
+              style={{ width: '150px', padding: '6px 10px', fontSize: '0.85rem' }}
+              value={filterYear}
+              onChange={(e) => setFilterYear(e.target.value)}
+            >
+              <option value="All">All Years</option>
+              <option value="First Year">First Year</option>
+              <option value="Second Year">Second Year</option>
+              <option value="Third Year">Third Year</option>
+              <option value="Fourth Year">Fourth Year</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 500 }}>Semester:</label>
+            <select
+              className="form-select"
+              style={{ width: '120px', padding: '6px 10px', fontSize: '0.85rem' }}
+              value={filterSem}
+              onChange={(e) => setFilterSem(e.target.value)}
+            >
+              <option value="All">All Semesters</option>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                <option key={s} value={s}>Semester {s}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 500 }}>Section:</label>
+            <select
+              className="form-select"
+              style={{ width: '120px', padding: '6px 10px', fontSize: '0.85rem' }}
+              value={filterSection}
+              onChange={(e) => setFilterSection(e.target.value)}
+            >
+              <option value="All">All Sections</option>
+              <option value="A">Section A</option>
+              <option value="B">Section B</option>
+              <option value="C">Section C</option>
+              <option value="D">Section D</option>
+            </select>
+          </div>
+
+          {(filterYear !== 'All' || filterSem !== 'All' || filterSection !== 'All') && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                setFilterYear('All');
+                setFilterSem('All');
+                setFilterSection('All');
+              }}
+            >
+              Reset Filters
+            </button>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: '#2563EB', fontWeight: 600 }}>
           Loading course projects...
@@ -203,13 +300,15 @@ export default function ProjectsPage() {
           <FolderGit2 size={48} style={{ margin: '0 auto 12px', color: '#CBD5E1' }} />
           <h3 style={{ fontSize: '1.1rem', color: '#142D4E', fontWeight: 700 }}>No projects found</h3>
           <p style={{ fontSize: '0.88rem', marginTop: '4px' }}>
-            {isStudent ? 'No academic projects have been posted for your course yet.' : 'Click "Create New Project" to assign an assignment.'}
+            {isStudent ? 'No academic projects have been posted for your assigned academic group yet.' : 'Click "Create New Project" to assign an assignment.'}
           </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
           {projects.map((p) => {
             const isDueSoon = p.daysRemaining <= 2 && !p.isOverdue;
+            const targetGroupDisplay = `${p.academicYear || 'All Years'} • Sem ${p.semester || 'All'} • Sec ${p.section || 'All'}`;
+
             return (
               <div
                 key={p.id}
@@ -230,6 +329,11 @@ export default function ProjectsPage() {
                     <Badge status={p.status} />
                   </div>
 
+                  {/* Academic Group Target Badge */}
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#EFF6FF', color: '#1E40AF', padding: '4px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, marginBottom: '10px' }}>
+                    <GraduationCap size={14} /> Target: {targetGroupDisplay}
+                  </div>
+
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#142D4E', lineHeight: 1.3, marginBottom: '6px' }}>
                     {p.title}
                   </h3>
@@ -238,9 +342,34 @@ export default function ProjectsPage() {
                     Instructor: <strong>Prof. {p.facultyName}</strong>
                   </div>
 
-                  <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.5, marginBottom: '16px' }}>
+                  <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.5, marginBottom: '14px' }}>
                     {p.description}
                   </p>
+
+                  {p.submissionFormat && (
+                    <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '8px' }}>
+                      <strong>Format:</strong> {p.submissionFormat}
+                    </div>
+                  )}
+
+                  {p.instructions && (
+                    <div style={{ fontSize: '0.8rem', backgroundColor: '#F8FAFC', padding: '8px 12px', borderRadius: '6px', color: '#334155', marginBottom: '12px' }}>
+                      <strong>Guidelines:</strong> {p.instructions}
+                    </div>
+                  )}
+
+                  {p.attachmentUrl && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <a
+                        href={p.attachmentUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ fontSize: '0.82rem', color: '#2563EB', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                      >
+                        <LinkIcon size={14} /> Course Material / Reference Link
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
@@ -260,13 +389,24 @@ export default function ProjectsPage() {
                     </div>
                   </div>
 
-                  {/* Role Specific Actions */}
+                  {/* Student View Actions */}
                   {isStudent && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       {p.studentSubmitted ? (
-                        <span className="badge badge-success">
-                          ✓ Submitted ({p.studentSubmissionStatus})
-                        </span>
+                        <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className={`badge ${p.studentSubmissionStatus === 'REVIEWED' ? 'badge-success' : p.studentSubmissionStatus === 'LATE' ? 'badge-warning' : 'badge-info'}`}>
+                            ✓ {p.studentSubmissionStatus === 'REVIEWED' ? 'Graded & Reviewed' : p.studentSubmissionStatus === 'LATE' ? 'Submitted Late' : 'Submitted'}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedProject(p);
+                              setIsSubmitModalOpen(true);
+                            }}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            Update Submission
+                          </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => {
@@ -282,16 +422,18 @@ export default function ProjectsPage() {
                     </div>
                   )}
 
+                  {/* Faculty View Actions */}
                   {(isFaculty || isAdmin) && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.8rem', color: '#64748B' }}>
-                        {p.totalSubmissions} submitted ({p.reviewedSubmissions} graded)
-                      </span>
+                      <div style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                        <div><strong>{p.totalSubmissions || 0}</strong> of <strong>{p.assignedStudentCount || 0}</strong> submitted</div>
+                        <div style={{ color: '#0F9D8A' }}>{p.reviewedSubmissions || 0} graded</div>
+                      </div>
                       <button
                         onClick={() => handleOpenReviews(p)}
                         className="btn btn-secondary btn-sm"
                       >
-                        <FileCheck2 size={14} /> Review Work
+                        <FileCheck2 size={14} /> Review ({p.totalSubmissions || 0})
                       </button>
                     </div>
                   )}
@@ -307,6 +449,7 @@ export default function ProjectsPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         title="Create Academic Project / Assignment"
+        maxWidth="650px"
       >
         {modalError && (
           <div style={{ background: '#FEE2E2', color: '#DC2626', padding: '10px', borderRadius: '6px', marginBottom: '14px', fontSize: '0.85rem' }}>
@@ -351,6 +494,55 @@ export default function ProjectsPage() {
             </div>
           </div>
 
+          {/* Academic Group Targeting */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', marginBottom: '14px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Academic Year</label>
+              <select
+                className="form-select"
+                value={projectForm.academicYear}
+                onChange={(e) => setProjectForm({ ...projectForm, academicYear: e.target.value })}
+                required
+              >
+                <option value="All">All Years</option>
+                <option value="First Year">First Year</option>
+                <option value="Second Year">Second Year</option>
+                <option value="Third Year">Third Year</option>
+                <option value="Fourth Year">Fourth Year</option>
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Semester</label>
+              <select
+                className="form-select"
+                value={projectForm.semester}
+                onChange={(e) => setProjectForm({ ...projectForm, semester: e.target.value })}
+                required
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                  <option key={s} value={s}>Semester {s}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Section</label>
+              <select
+                className="form-select"
+                value={projectForm.section}
+                onChange={(e) => setProjectForm({ ...projectForm, section: e.target.value })}
+                required
+              >
+                <option value="All">All Sections</option>
+                <option value="A">Section A</option>
+                <option value="B">Section B</option>
+                <option value="C">Section C</option>
+                <option value="D">Section D</option>
+              </select>
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div className="form-group">
               <label className="form-label">Start Date</label>
@@ -376,14 +568,47 @@ export default function ProjectsPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Instructions & Deliverables</label>
+            <label className="form-label">Submission Format</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="e.g. GitHub Repository URL / PDF Report / ZIP Archive"
+              value={projectForm.submissionFormat}
+              onChange={(e) => setProjectForm({ ...projectForm, submissionFormat: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Project Instructions & Description</label>
             <textarea
-              rows="4"
+              rows="3"
               className="form-textarea"
-              placeholder="Detailed guidelines, grading criteria, acceptable file formats..."
+              placeholder="Overview of project requirements and milestones..."
               value={projectForm.description}
               onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
               required
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Grading Criteria & Detailed Guidelines</label>
+            <textarea
+              rows="2"
+              className="form-textarea"
+              placeholder="Evaluation rubrics, code style requirements, bonus points..."
+              value={projectForm.instructions}
+              onChange={(e) => setProjectForm({ ...projectForm, instructions: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Attachment / Reference URL</label>
+            <input
+              type="url"
+              className="form-input"
+              placeholder="https://example.com/project_spec.pdf"
+              value={projectForm.attachmentUrl}
+              onChange={(e) => setProjectForm({ ...projectForm, attachmentUrl: e.target.value })}
             />
           </div>
 
@@ -422,6 +647,11 @@ export default function ProjectsPage() {
           <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', marginBottom: '14px', fontSize: '0.85rem' }}>
             <div>Due Date: <strong>{selectedProject?.dueDate}</strong></div>
             <div style={{ color: '#64748B', marginTop: '4px' }}>{selectedProject?.description}</div>
+            {selectedProject?.submissionFormat && (
+              <div style={{ color: '#2563EB', marginTop: '4px', fontWeight: 600 }}>
+                Format Required: {selectedProject.submissionFormat}
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -429,7 +659,7 @@ export default function ProjectsPage() {
             <textarea
               rows="4"
               className="form-textarea"
-              placeholder="Enter your implementation summary, GitHub repo URL, or answers here..."
+              placeholder="Enter your implementation summary, GitHub repo URL, or documentation links here..."
               value={submissionText}
               onChange={(e) => setSubmissionText(e.target.value)}
               required
@@ -437,7 +667,7 @@ export default function ProjectsPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Deliverable File Name / Archive</label>
+            <label className="form-label">Deliverable File Name / Archive Name</label>
             <input
               type="text"
               className="form-input"

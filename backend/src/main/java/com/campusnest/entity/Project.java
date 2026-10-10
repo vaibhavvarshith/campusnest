@@ -28,6 +28,24 @@ public class Project {
     @Column(nullable = false, length = 100)
     private String course;
 
+    @Column(name = "academic_year", nullable = false, length = 30)
+    private String academicYear = "Third Year";
+
+    @Column(nullable = false)
+    private Integer semester = 6;
+
+    @Column(nullable = false, length = 20)
+    private String section = "A";
+
+    @Column(columnDefinition = "TEXT")
+    private String instructions;
+
+    @Column(name = "submission_format", length = 100)
+    private String submissionFormat = "GitHub Repository / PDF Report";
+
+    @Column(name = "attachment_url", length = 255)
+    private String attachmentUrl;
+
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
@@ -67,6 +85,24 @@ public class Project {
 
     public String getCourse() { return course; }
     public void setCourse(String course) { this.course = course; }
+
+    public String getAcademicYear() { return academicYear; }
+    public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
+
+    public Integer getSemester() { return semester; }
+    public void setSemester(Integer semester) { this.semester = semester; }
+
+    public String getSection() { return section; }
+    public void setSection(String section) { this.section = section; }
+
+    public String getInstructions() { return instructions; }
+    public void setInstructions(String instructions) { this.instructions = instructions; }
+
+    public String getSubmissionFormat() { return submissionFormat; }
+    public void setSubmissionFormat(String submissionFormat) { this.submissionFormat = submissionFormat; }
+
+    public String getAttachmentUrl() { return attachmentUrl; }
+    public void setAttachmentUrl(String attachmentUrl) { this.attachmentUrl = attachmentUrl; }
 
     public LocalDate getStartDate() { return startDate; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }

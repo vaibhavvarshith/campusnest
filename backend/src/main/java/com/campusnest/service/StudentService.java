@@ -39,6 +39,20 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
+    public PagedResponse<UserResponse> filterStudents(String academicYear, String department,
+                                                      Integer semester, String section,
+                                                      String query, Pageable pageable) {
+        Page<Student> studentPage = studentRepository.filterStudents(
+                academicYear, department, semester, section, query, pageable
+        );
+        List<UserResponse> responses = studentPage.getContent().stream()
+                .map(this::mapToResponse)
+                .toList();
+
+        return PagedResponse.of(responses, studentPage);
+    }
+
+    @Transactional(readOnly = true)
     public PagedResponse<UserResponse> searchStudents(String query, Pageable pageable) {
         Page<Student> studentPage = studentRepository.searchStudents(query, pageable);
         List<UserResponse> responses = studentPage.getContent().stream()
@@ -98,6 +112,8 @@ public class StudentService {
         student.setDepartment(request.getDepartment());
         student.setCourse(request.getCourse());
         student.setAcademicYear(request.getAcademicYear());
+        student.setSemester(request.getSemester() != null ? request.getSemester() : 6);
+        student.setSection(request.getSection() != null && !request.getSection().isBlank() ? request.getSection() : "A");
         student.setDateOfBirth(request.getDateOfBirth());
         Student savedStudent = studentRepository.save(student);
 
@@ -122,6 +138,12 @@ public class StudentService {
         student.setDepartment(request.getDepartment());
         student.setCourse(request.getCourse());
         student.setAcademicYear(request.getAcademicYear());
+        if (request.getSemester() != null) {
+            student.setSemester(request.getSemester());
+        }
+        if (request.getSection() != null && !request.getSection().isBlank()) {
+            student.setSection(request.getSection());
+        }
         student.setDateOfBirth(request.getDateOfBirth());
         Student updatedStudent = studentRepository.save(student);
 
@@ -168,6 +190,9 @@ public class StudentService {
         response.setDepartment(student.getDepartment());
         response.setCourse(student.getCourse());
         response.setAcademicYear(student.getAcademicYear());
+        response.setSemester(student.getSemester());
+        response.setSection(student.getSection());
+        response.setAccountStatus(user.getIsActive() != null && user.getIsActive() ? "ACTIVE" : "INACTIVE");
         response.setCreatedAt(user.getCreatedAt());
         return response;
     }

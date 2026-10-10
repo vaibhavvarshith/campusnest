@@ -65,7 +65,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/api/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/settings/**", "/api/admin/settings/**").hasRole("ADMIN")
+                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "LIBRARIAN")
+                .requestMatchers("/api/librarian/**").hasAnyRole("LIBRARIAN", "ADMIN")
                 .requestMatchers("/api/faculty/**").hasAnyRole("FACULTY", "ADMIN")
                 .requestMatchers("/api/student/**").hasAnyRole("STUDENT", "ADMIN")
                 .anyRequest().authenticated()

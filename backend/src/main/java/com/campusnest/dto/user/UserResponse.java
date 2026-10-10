@@ -17,6 +17,9 @@ public class UserResponse {
     private String registrationNumber;
     private String course;
     private String academicYear;
+    private Integer semester;
+    private String section;
+    private String accountStatus;
     // Faculty specifics
     private Long facultyId;
     private String employeeId;
@@ -63,6 +66,18 @@ public class UserResponse {
 
     public String getAcademicYear() { return academicYear; }
     public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
+
+    public Integer getSemester() { return semester; }
+    public void setSemester(Integer semester) { this.semester = semester; }
+
+    public String getSection() { return section; }
+    public void setSection(String section) { this.section = section; }
+
+    public String getAccountStatus() {
+        if (accountStatus != null) return accountStatus;
+        return (isActive != null && isActive) ? "ACTIVE" : "INACTIVE";
+    }
+    public void setAccountStatus(String accountStatus) { this.accountStatus = accountStatus; }
 
     public Long getFacultyId() { return facultyId; }
     public void setFacultyId(Long facultyId) { this.facultyId = facultyId; }

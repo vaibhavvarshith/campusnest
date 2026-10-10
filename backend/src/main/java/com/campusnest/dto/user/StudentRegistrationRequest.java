@@ -28,6 +28,10 @@ public class StudentRegistrationRequest {
     @NotBlank(message = "Academic year is required")
     private String academicYear;
 
+    private Integer semester = 6;
+
+    private String section = "A";
+
     @NotNull(message = "Date of birth is required")
     private LocalDate dateOfBirth;
 
@@ -53,6 +57,12 @@ public class StudentRegistrationRequest {
 
     public String getAcademicYear() { return academicYear; }
     public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
+
+    public Integer getSemester() { return semester; }
+    public void setSemester(Integer semester) { this.semester = semester; }
+
+    public String getSection() { return section; }
+    public void setSection(String section) { this.section = section; }
 
     public LocalDate getDateOfBirth() { return dateOfBirth; }
     public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }

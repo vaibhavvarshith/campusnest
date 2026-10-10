@@ -28,6 +28,12 @@ public class Student {
     @Column(name = "academic_year", nullable = false, length = 20)
     private String academicYear;
 
+    @Column(nullable = false)
+    private Integer semester = 6;
+
+    @Column(nullable = false, length = 10)
+    private String section = "A";
+
     @Column(name = "date_of_birth", nullable = false)
     private LocalDate dateOfBirth;
 
@@ -61,6 +67,12 @@ public class Student {
 
     public String getAcademicYear() { return academicYear; }
     public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
+
+    public Integer getSemester() { return semester; }
+    public void setSemester(Integer semester) { this.semester = semester; }
+
+    public String getSection() { return section; }
+    public void setSection(String section) { this.section = section; }
 
     public LocalDate getDateOfBirth() { return dateOfBirth; }
     public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }

@@ -7,9 +7,10 @@ USE campusnest_db;
 
 -- 1. Insert Roles
 INSERT INTO roles (id, name, description) VALUES
-(1, 'ROLE_ADMIN', 'Administrator / Librarian with full library management access'),
+(1, 'ROLE_ADMIN', 'Administrator with full system administration and library management access'),
 (2, 'ROLE_STUDENT', 'College student with borrowing, deadline, and project submission access'),
-(3, 'ROLE_FACULTY', 'College faculty with borrowing and academic project creation access')
+(3, 'ROLE_FACULTY', 'College faculty with borrowing and academic project creation access'),
+(4, 'ROLE_LIBRARIAN', 'Librarian with circulation desk, catalog, and fine management privileges')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
 -- 2. Insert Library Settings
@@ -32,6 +33,7 @@ ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value);
 -- Student 5 (STU2026005 / Student@123 -> first_login=FALSE)
 -- Faculty 1 (FAC2026001 / Faculty@123 -> first_login=FALSE)
 -- Faculty 2 (FAC2026002 / Faculty@123 -> first_login=FALSE)
+-- Librarian (LIB2026001 / Librarian@123 -> first_login=FALSE)
 INSERT INTO users (id, username, password_hash, role_id, full_name, email, phone, is_active, first_login) VALUES
 (1, 'admin', '$2a$10$IAwqvrACPmZo7x6ki2xA1.6LqvNNVwy0dmLcuNutYAipSFDet3Gdu', 1, 'Dr. Alistair Vance', 'admin@campusnest.edu', '+91 9876543210', TRUE, FALSE),
 (2, 'STU2026001', '$2a$10$/Kl22WIACSL8zbVCzNaTNerti4CGGDHraBZcahk6ckSXh/W9Uma3u', 2, 'Arjun Sharma', 'arjun.sharma@campusnest.edu', '+91 9876500001', TRUE, TRUE),
@@ -40,16 +42,17 @@ INSERT INTO users (id, username, password_hash, role_id, full_name, email, phone
 (5, 'STU2026004', '$2a$10$NumH1LnmzI7zg7Lb6hrgtOPx54wyOhVBMEY7oZR051vhbemNio2bq', 2, 'Sneha Reddy', 'sneha.reddy@campusnest.edu', '+91 9876500004', TRUE, FALSE),
 (6, 'STU2026005', '$2a$10$NumH1LnmzI7zg7Lb6hrgtOPx54wyOhVBMEY7oZR051vhbemNio2bq', 2, 'Kavya Nair', 'kavya.nair@campusnest.edu', '+91 9876500005', TRUE, FALSE),
 (7, 'FAC2026001', '$2a$10$fClVEjZIB2wBhZwlDNHRcusjgGBlFkNHiJ1x61SRKTI6QI.rWM7jC', 3, 'Dr. Rajesh Kumar', 'dr.rajesh.kumar@campusnest.edu', '+91 9876510001', TRUE, FALSE),
-(8, 'FAC2026002', '$2a$10$fClVEjZIB2wBhZwlDNHRcusjgGBlFkNHiJ1x61SRKTI6QI.rWM7jC', 3, 'Prof. Anita Deshmukh', 'anita.deshmukh@campusnest.edu', '+91 9876510002', TRUE, FALSE)
+(8, 'FAC2026002', '$2a$10$fClVEjZIB2wBhZwlDNHRcusjgGBlFkNHiJ1x61SRKTI6QI.rWM7jC', 3, 'Prof. Anita Deshmukh', 'anita.deshmukh@campusnest.edu', '+91 9876510002', TRUE, FALSE),
+(12, 'LIB2026001', '$2a$10$IAwqvrACPmZo7x6ki2xA1.6LqvNNVwy0dmLcuNutYAipSFDet3Gdu', 4, 'Mrs. Savitha Deshmukh', 'librarian@campusnest.edu', '+91 9876543220', TRUE, FALSE)
 ON DUPLICATE KEY UPDATE full_name=VALUES(full_name);
 
 -- 4. Insert Students
-INSERT INTO students (id, user_id, registration_number, department, course, academic_year, date_of_birth) VALUES
-(1, 2, 'STU2026001', 'Computer Science & Engineering', 'B.Tech CSE', '3rd Year', '2006-08-15'),
-(2, 3, 'STU2026002', 'Information Technology', 'B.Tech IT', '2nd Year', '2005-11-22'),
-(3, 4, 'STU2026003', 'Electronics & Communication', 'B.Tech ECE', '3rd Year', '2006-04-10'),
-(4, 5, 'STU2026004', 'Computer Science & Engineering', 'B.Tech CSE', '4th Year', '2005-09-05'),
-(5, 6, 'STU2026005', 'Artificial Intelligence & Data Science', 'B.Tech AI & DS', '2nd Year', '2006-12-12')
+INSERT INTO students (id, user_id, registration_number, department, course, academic_year, semester, section, date_of_birth) VALUES
+(1, 2, 'STU2026001', 'Computer Science & Engineering', 'B.Tech CSE', 'Third Year', 6, 'A', '2006-08-15'),
+(2, 3, 'STU2026002', 'Information Technology', 'B.Tech IT', 'Third Year', 5, 'B', '2005-11-22'),
+(3, 4, 'STU2026003', 'Electronics & Communication', 'B.Tech ECE', 'Second Year', 4, 'A', '2006-04-10'),
+(4, 5, 'STU2026004', 'Computer Science & Engineering', 'B.Tech CSE', 'First Year', 2, 'A', '2005-09-05'),
+(5, 6, 'STU2026005', 'Artificial Intelligence & Data Science', 'B.Tech AI & DS', 'Fourth Year', 7, 'C', '2006-12-12')
 ON DUPLICATE KEY UPDATE registration_number=VALUES(registration_number);
 
 -- 5. Insert Faculty

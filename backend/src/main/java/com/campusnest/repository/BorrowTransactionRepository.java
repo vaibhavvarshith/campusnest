@@ -18,7 +18,13 @@ public interface BorrowTransactionRepository extends JpaRepository<BorrowTransac
 
     List<BorrowTransaction> findByUserIdAndStatus(Long userId, String status);
 
+    boolean existsByUserIdAndBookIdAndStatus(Long userId, Long bookId, String status);
+
     long countByUserIdAndStatus(Long userId, String status);
+
+    default long countActiveIssuedByUserId(Long userId) {
+        return countByUserIdAndStatus(userId, "ISSUED");
+    }
 
     long countByStatus(String status);
 

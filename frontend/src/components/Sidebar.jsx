@@ -26,6 +26,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const adminLinks = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/books', label: 'Book Catalogue', icon: BookMarked },
+    { to: '/borrow-requests', label: 'Borrow Requests', icon: ArrowRightLeft },
     { to: '/students', label: 'Students', icon: GraduationCap },
     { to: '/faculty', label: 'Faculty', icon: Users },
     { to: '/issue-return', label: 'Issue & Return', icon: ArrowRightLeft },
@@ -36,6 +37,18 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/notifications', label: 'Notifications', icon: Bell },
     { to: '/reports', label: 'Reports & Audits', icon: BarChart3 },
     { to: '/settings', label: 'Library Settings', icon: Settings },
+  ];
+
+  const librarianLinks = [
+    { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/books', label: 'Book Catalogue', icon: BookMarked },
+    { to: '/borrow-requests', label: 'Borrow Requests', icon: ArrowRightLeft },
+    { to: '/issue-return', label: 'Issue & Return', icon: ArrowRightLeft },
+    { to: '/borrow-history', label: 'Borrowing History', icon: History },
+    { to: '/overdue', label: 'Overdue Books', icon: AlertTriangle },
+    { to: '/fines', label: 'Fine Management', icon: Receipt },
+    { to: '/students', label: 'Students', icon: GraduationCap },
+    { to: '/notifications', label: 'Notifications', icon: Bell },
   ];
 
   const studentLinks = [
@@ -61,7 +74,8 @@ export default function Sidebar({ isOpen, onClose }) {
   ];
 
   let links = adminLinks;
-  if (role === 'ROLE_STUDENT') links = studentLinks;
+  if (role === 'ROLE_LIBRARIAN') links = librarianLinks;
+  else if (role === 'ROLE_STUDENT') links = studentLinks;
   else if (role === 'ROLE_FACULTY') links = facultyLinks;
 
   return (
@@ -104,7 +118,13 @@ export default function Sidebar({ isOpen, onClose }) {
           }}
         >
           <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94A3B8', fontWeight: 600 }}>
-            {role === 'ROLE_ADMIN' ? 'Library Administration' : role === 'ROLE_FACULTY' ? 'Faculty Portal' : 'Student Academic Portal'}
+            {role === 'ROLE_ADMIN'
+              ? 'Library Administration'
+              : role === 'ROLE_LIBRARIAN'
+              ? 'Librarian Desk'
+              : role === 'ROLE_FACULTY'
+              ? 'Faculty Portal'
+              : 'Student Academic Portal'}
           </div>
           <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#FFFFFF', marginTop: '4px' }}>
             {user?.fullName}

@@ -5,6 +5,7 @@ import com.campusnest.entity.Project;
 import com.campusnest.entity.Student;
 import com.campusnest.repository.BorrowTransactionRepository;
 import com.campusnest.repository.ProjectRepository;
+import com.campusnest.repository.ProjectSubmissionRepository;
 import com.campusnest.repository.StudentRepository;
 import com.campusnest.service.NotificationService;
 import org.slf4j.Logger;
@@ -25,15 +26,18 @@ public class AutomatedReminderScheduler {
 
     private final BorrowTransactionRepository transactionRepository;
     private final ProjectRepository projectRepository;
+    private final ProjectSubmissionRepository submissionRepository;
     private final StudentRepository studentRepository;
     private final NotificationService notificationService;
 
     public AutomatedReminderScheduler(BorrowTransactionRepository transactionRepository,
                                       ProjectRepository projectRepository,
+                                      ProjectSubmissionRepository submissionRepository,
                                       StudentRepository studentRepository,
                                       NotificationService notificationService) {
         this.transactionRepository = transactionRepository;
         this.projectRepository = projectRepository;
+        this.submissionRepository = submissionRepository;
         this.studentRepository = studentRepository;
         this.notificationService = notificationService;
     }
@@ -52,7 +56,6 @@ public class AutomatedReminderScheduler {
 
     /**
      * Scans and generates 2-day, due-today, and overdue notifications for book borrow transactions.
-     * Injectable currentDate parameter ensures easy and deterministic unit/integration testing.
      */
     @Transactional
     public void scanAndGenerateBookReminders(LocalDate currentDate) {
@@ -97,7 +100,8 @@ public class AutomatedReminderScheduler {
     }
 
     /**
-     * Scans and generates 2-day reminders for active academic project deadlines.
+     * Scans and generates 2-day, due-today, and overdue reminders for academic project deadlines
+     * targeting assigned academic groups who have not yet submitted.
      */
     @Transactional
     public void scanAndGenerateProjectReminders(LocalDate currentDate) {
@@ -108,13 +112,8 @@ public class AutomatedReminderScheduler {
         List<Project> projectsDueInTwoDays = projectRepository.findActiveProjectsByDueDate(twoDaysFromNow);
 
         for (Project project : projectsDueInTwoDays) {
-            // Find students in matching department and course
-            List<Student> students = studentRepository.findAll().stream()
-                    .filter(s -> s.getDepartment().equalsIgnoreCase(project.getDepartment()) &&
-                                 s.getCourse().equalsIgnoreCase(project.getCourse()))
-                    .toList();
-
-            for (Student student : students) {
+            List<Student> targetStudents = getAssignedUnsubmittedStudents(project);
+            for (Student student : targetStudents) {
                 String title = "Academic Project Due in 2 Days";
                 String message = String.format("Reminder: Your submission for project \"%s\" is due in 2 days, on %s. Please submit before the deadline.",
                         project.getTitle(), project.getDueDate().format(DATE_FORMATTER));
@@ -128,12 +127,8 @@ public class AutomatedReminderScheduler {
         // 2. Due-today project reminder (dueDate == currentDate)
         List<Project> projectsDueToday = projectRepository.findActiveProjectsByDueDate(currentDate);
         for (Project project : projectsDueToday) {
-            List<Student> students = studentRepository.findAll().stream()
-                    .filter(s -> s.getDepartment().equalsIgnoreCase(project.getDepartment()) &&
-                                 s.getCourse().equalsIgnoreCase(project.getCourse()))
-                    .toList();
-
-            for (Student student : students) {
+            List<Student> targetStudents = getAssignedUnsubmittedStudents(project);
+            for (Student student : targetStudents) {
                 String title = "Academic Project Due Today";
                 String message = String.format("Final Reminder: Project \"%s\" is due today (%s). Please submit your work before midnight.",
                         project.getTitle(), project.getDueDate().format(DATE_FORMATTER));
@@ -143,5 +138,26 @@ public class AutomatedReminderScheduler {
                 );
             }
         }
+    }
+
+    private List<Student> getAssignedUnsubmittedStudents(Project project) {
+        return studentRepository.findAll().stream()
+                .filter(s -> project.getDepartment() == null || project.getDepartment().equalsIgnoreCase("All") || s.getDepartment().equalsIgnoreCase(project.getDepartment()))
+                .filter(s -> s.getAcademicYear() == null ||
+                             project.getAcademicYear() == null ||
+                             project.getAcademicYear().equalsIgnoreCase("All") ||
+                             project.getAcademicYear().equalsIgnoreCase("All Years") ||
+                             project.getAcademicYear().equalsIgnoreCase(s.getAcademicYear()))
+                .filter(s -> s.getSemester() == null ||
+                             project.getSemester() == null ||
+                             project.getSemester() == 0 ||
+                             project.getSemester().equals(s.getSemester()))
+                .filter(s -> s.getSection() == null ||
+                             project.getSection() == null ||
+                             project.getSection().equalsIgnoreCase("All") ||
+                             project.getSection().equalsIgnoreCase("All Sections") ||
+                             project.getSection().equalsIgnoreCase(s.getSection()))
+                .filter(s -> !submissionRepository.existsByProjectIdAndStudentId(project.getId(), s.getId()))
+                .toList();
     }
 }

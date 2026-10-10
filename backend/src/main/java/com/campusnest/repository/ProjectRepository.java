@@ -16,6 +16,27 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     Page<Project> findByFacultyId(Long facultyId, Pageable pageable);
 
+    @Query("SELECT p FROM Project p WHERE p.faculty.id = :facultyId AND " +
+           "(:academicYear IS NULL OR :academicYear = '' OR p.academicYear = :academicYear) AND " +
+           "(:semester IS NULL OR p.semester = :semester) AND " +
+           "(:section IS NULL OR :section = '' OR p.section = :section)")
+    Page<Project> findByFacultyIdAndFilters(@Param("facultyId") Long facultyId,
+                                           @Param("academicYear") String academicYear,
+                                           @Param("semester") Integer semester,
+                                           @Param("section") String section,
+                                           Pageable pageable);
+
+    @Query("SELECT p FROM Project p WHERE p.status = 'ACTIVE' AND " +
+           "LOWER(p.department) = LOWER(:department) AND " +
+           "(:academicYear IS NULL OR LOWER(p.academicYear) = LOWER(:academicYear) OR LOWER(p.academicYear) = 'all' OR LOWER(p.academicYear) = 'all years') AND " +
+           "(:semester IS NULL OR p.semester = 0 OR p.semester = :semester) AND " +
+           "(:section IS NULL OR LOWER(p.section) = LOWER(:section) OR LOWER(p.section) = 'all' OR LOWER(p.section) = 'all sections')")
+    Page<Project> findByStudentGroup(@Param("department") String department,
+                                    @Param("academicYear") String academicYear,
+                                    @Param("semester") Integer semester,
+                                    @Param("section") String section,
+                                    Pageable pageable);
+
     @Query("SELECT p FROM Project p WHERE p.department = :department AND p.course = :course AND p.status = 'ACTIVE'")
     Page<Project> findByDepartmentAndCourse(@Param("department") String department,
                                            @Param("course") String course,
