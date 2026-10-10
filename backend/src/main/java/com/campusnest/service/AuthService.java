@@ -82,6 +82,7 @@ public class AuthService {
                 response.setFacultyId(f.getId());
                 response.setIdentifier(f.getEmployeeId());
                 response.setDepartment(f.getDepartment());
+                response.setIsSubjectHead(Boolean.TRUE.equals(f.getIsSubjectHead()));
             });
         }
 
@@ -154,6 +155,8 @@ public class AuthService {
                 response.setDepartment(s.getDepartment());
                 response.setCourse(s.getCourse());
                 response.setAcademicYear(s.getAcademicYear());
+                response.setSemester(s.getSemester());
+                response.setSection(s.getSection());
             });
         } else if ("ROLE_FACULTY".equals(user.getRole().getName())) {
             facultyRepository.findByUserId(user.getId()).ifPresent(f -> {
@@ -162,6 +165,7 @@ public class AuthService {
                 response.setDepartment(f.getDepartment());
                 response.setDesignation(f.getDesignation());
                 response.setJoiningDate(f.getJoiningDate());
+                response.setIsSubjectHead(Boolean.TRUE.equals(f.getIsSubjectHead()));
             });
         }
 

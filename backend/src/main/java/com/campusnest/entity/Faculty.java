@@ -25,6 +25,9 @@ public class Faculty {
     @Column(nullable = false, length = 100)
     private String designation;
 
+    @Column(name = "is_subject_head", nullable = false)
+    private Boolean isSubjectHead = false;
+
     @Column(name = "joining_date")
     private LocalDate joiningDate;
 
@@ -55,6 +58,9 @@ public class Faculty {
 
     public String getDesignation() { return designation; }
     public void setDesignation(String designation) { this.designation = designation; }
+
+    public Boolean getIsSubjectHead() { return isSubjectHead; }
+    public void setIsSubjectHead(Boolean isSubjectHead) { this.isSubjectHead = isSubjectHead; }
 
     public LocalDate getJoiningDate() { return joiningDate; }
     public void setJoiningDate(LocalDate joiningDate) { this.joiningDate = joiningDate; }

@@ -65,6 +65,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const facultyLinks = [
     { to: '/', label: 'Faculty Dashboard', icon: LayoutDashboard },
+    ...(user?.isSubjectHead ? [{ to: '/subject-head', label: 'Subject Head Desk', icon: Award }] : []),
     { to: '/books', label: 'Browse Books', icon: BookMarked },
     { to: '/my-books', label: 'My Borrowed Books', icon: History },
     { to: '/my-fines', label: 'My Fines', icon: Receipt },
@@ -77,6 +78,13 @@ export default function Sidebar({ isOpen, onClose }) {
   if (role === 'ROLE_LIBRARIAN') links = librarianLinks;
   else if (role === 'ROLE_STUDENT') links = studentLinks;
   else if (role === 'ROLE_FACULTY') links = facultyLinks;
+  if (role === 'ROLE_ADMIN') {
+    links = [
+      ...adminLinks.slice(0, 10),
+      { to: '/subject-head', label: 'Subject Head Desk', icon: Award },
+      ...adminLinks.slice(10)
+    ];
+  }
 
   return (
     <>

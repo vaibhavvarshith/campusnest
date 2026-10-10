@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import Badge from '../components/Badge';
+import PdfUploader from '../components/PdfUploader';
 import {
   FolderGit2,
   Plus,
@@ -20,6 +21,9 @@ import {
   FileText,
   Users,
   Check,
+  Download,
+  Trophy,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function ProjectsPage() {
@@ -27,6 +31,7 @@ export default function ProjectsPage() {
   const isFaculty = user?.role === 'ROLE_FACULTY';
   const isStudent = user?.role === 'ROLE_STUDENT';
   const isAdmin = user?.role === 'ROLE_ADMIN';
+  const isSubjectHead = Boolean(user?.isSubjectHead);
 
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,9 +51,13 @@ export default function ProjectsPage() {
     academicYear: 'Third Year',
     semester: 6,
     section: 'A',
-    submissionFormat: 'GitHub Repository / PDF Report',
+    submissionFormat: 'PDF Report / Deliverable',
     instructions: '',
     attachmentUrl: '',
+    pdfUrl: '',
+    pdfFileName: '',
+    pdfFileSize: 0,
+    maxScore: 100,
     startDate: new Date().toISOString().split('T')[0],
     dueDate: '',
   });
@@ -57,14 +66,23 @@ export default function ProjectsPage() {
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [submissionText, setSubmissionText] = useState('');
-  const [fileName, setFileName] = useState('');
+  const [studentPdfData, setStudentPdfData] = useState(null);
 
   // Submissions Review Modal (Faculty)
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [currentSubmissions, setCurrentSubmissions] = useState([]);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [score, setScore] = useState(85);
   const [grade, setGrade] = useState('A');
   const [feedback, setFeedback] = useState('');
+  const [rubricQuality, setRubricQuality] = useState(25);
+  const [rubricDoc, setRubricDoc] = useState(25);
+  const [rubricExecution, setRubricExecution] = useState(25);
+  const [rubricPresentation, setRubricPresentation] = useState(10);
+  const [isDraft, setIsDraft] = useState(false);
+
+  // Student's personal submission details
+  const [mySubmissionsMap, setMySubmissionsMap] = useState({});
 
   const [toast, setToast] = useState('');
   const [modalError, setModalError] = useState('');
@@ -72,6 +90,9 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects();
+    if (isStudent) {
+      fetchMySubmissions();
+    }
   }, [user, filterYear, filterSem, filterSection]);
 
   const fetchProjects = async () => {
@@ -87,13 +108,31 @@ export default function ProjectsPage() {
       }
 
       const res = await api.get(endpoint);
-      if (res.success && res.data) {
+      if (res.data?.success && res.data?.data) {
+        setProjects(res.data.data.content || []);
+      } else if (res.success && res.data) {
         setProjects(res.data.content || []);
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMySubmissions = async () => {
+    try {
+      const res = await api.get('/student/projects/my-submissions');
+      const list = res.data?.data || res.data || [];
+      const map = {};
+      if (Array.isArray(list)) {
+        list.forEach((sub) => {
+          map[sub.projectId] = sub;
+        });
+      }
+      setMySubmissionsMap(map);
+    } catch (err) {
+      console.error('Failed to fetch personal submissions:', err);
     }
   };
 
@@ -105,11 +144,12 @@ export default function ProjectsPage() {
       const payload = {
         ...projectForm,
         semester: projectForm.semester ? parseInt(projectForm.semester, 10) : null,
+        maxScore: projectForm.maxScore ? parseInt(projectForm.maxScore, 10) : 100,
       };
       const res = await api.post('/faculty/projects', payload);
-      if (res.success) {
+      if (res.data?.success || res.success) {
         setIsCreateModalOpen(false);
-        setToast('Academic project created successfully!');
+        setToast('Academic project created and published successfully!');
         setProjectForm({
           title: '',
           description: '',
@@ -118,16 +158,20 @@ export default function ProjectsPage() {
           academicYear: 'Third Year',
           semester: 6,
           section: 'A',
-          submissionFormat: 'GitHub Repository / PDF Report',
+          submissionFormat: 'PDF Report / Deliverable',
           instructions: '',
           attachmentUrl: '',
+          pdfUrl: '',
+          pdfFileName: '',
+          pdfFileSize: 0,
+          maxScore: 100,
           startDate: new Date().toISOString().split('T')[0],
           dueDate: '',
         });
         fetchProjects();
       }
     } catch (err) {
-      setModalError(err.message || 'Failed to create project');
+      setModalError(err.response?.data?.message || err.message || 'Failed to create project');
     } finally {
       setSubmitting(false);
     }
@@ -141,21 +185,23 @@ export default function ProjectsPage() {
       const payload = {
         projectId: selectedProject.id,
         submissionText: submissionText,
-        fileName: fileName || 'academic_submission_report.pdf',
-        fileSize: 1024 * 512,
-        fileUrl: '/uploads/submissions/sample.pdf',
+        fileName: studentPdfData?.originalFileName || studentPdfData?.fileName || 'submission.pdf',
+        fileSize: studentPdfData?.fileSize || 1024,
+        fileUrl: studentPdfData?.downloadUrl || '',
+        pdfFilePath: studentPdfData?.downloadUrl || '',
       };
 
       const res = await api.post('/student/projects/submit', payload);
-      if (res.success) {
+      if (res.data?.success || res.success) {
         setIsSubmitModalOpen(false);
-        setToast(`Submission for '${selectedProject.title}' uploaded successfully!`);
+        setToast(`Deliverable for '${selectedProject.title}' uploaded and confirmed!`);
         setSubmissionText('');
-        setFileName('');
+        setStudentPdfData(null);
         fetchProjects();
+        fetchMySubmissions();
       }
     } catch (err) {
-      setModalError(err.message || 'Submission failed');
+      setModalError(err.response?.data?.message || err.message || 'Submission failed');
     } finally {
       setSubmitting(false);
     }
@@ -165,52 +211,91 @@ export default function ProjectsPage() {
     setSelectedProject(project);
     try {
       const res = await api.get(`/faculty/projects/${project.id}/submissions`);
-      if (res.success && res.data) {
-        setCurrentSubmissions(Array.isArray(res.data) ? res.data : (res.data.content || []));
-        setIsReviewModalOpen(true);
-      }
+      const list = res.data?.data || res.data || [];
+      setCurrentSubmissions(Array.isArray(list) ? list : (list.content || []));
+      setIsReviewModalOpen(true);
     } catch (err) {
-      alert(err.message || 'Failed to fetch submissions');
+      alert(err.response?.data?.message || err.message || 'Failed to fetch submissions');
     }
   };
 
   const handleGradeSubmission = async (e) => {
     e.preventDefault();
     try {
+      const rubricStr = JSON.stringify({
+        codeQuality: rubricQuality,
+        documentation: rubricDoc,
+        execution: rubricExecution,
+        presentation: rubricPresentation,
+      });
+
       const res = await api.post(`/faculty/projects/submissions/${selectedSubmission.id}/grade`, {
         grade: grade,
+        score: parseFloat(score),
         feedback: feedback,
+        rubricMarks: rubricStr,
+        isDraft: isDraft,
       });
-      if (res.success) {
-        setToast(`Grade ${grade} awarded to student ${selectedSubmission.studentName}!`);
+
+      if (res.data?.success || res.success) {
+        setToast(`Evaluation saved & class ranks recalculated! Rank #${res.data?.data?.rankPosition || selectedSubmission.rankPosition || 1} assigned.`);
         setSelectedSubmission(null);
         // Refresh submissions
         const refresh = await api.get(`/faculty/projects/${selectedProject.id}/submissions`);
-        if (refresh.success && refresh.data) {
-          setCurrentSubmissions(Array.isArray(refresh.data) ? refresh.data : (refresh.data.content || []));
-        }
+        const list = refresh.data?.data || refresh.data || [];
+        setCurrentSubmissions(Array.isArray(list) ? list : (list.content || []));
         fetchProjects();
       }
     } catch (err) {
-      alert(err.message || 'Failed to submit grade');
+      alert(err.response?.data?.message || err.message || 'Failed to submit grade');
     }
+  };
+
+  const getRankBadge = (rank) => {
+    if (!rank) return null;
+    if (rank === 1) {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', backgroundColor: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D', padding: '2px 8px', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 700 }}>
+          <Trophy size={12} color="#D97706" /> Rank #1
+        </span>
+      );
+    }
+    if (rank === 2) {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', backgroundColor: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', padding: '2px 8px', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 700 }}>
+          <Award size={12} color="#64748B" /> Rank #2
+        </span>
+      );
+    }
+    if (rank === 3) {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', backgroundColor: '#FFEDD5', color: '#C2410C', border: '1px solid #FDBA74', padding: '2px 8px', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 700 }}>
+          <Award size={12} color="#EA580C" /> Rank #3
+        </span>
+      );
+    }
+    return (
+      <span style={{ backgroundColor: '#F3F4F6', color: '#374151', padding: '2px 8px', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 700 }}>
+        Rank #{rank}
+      </span>
+    );
   };
 
   return (
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Academic Projects & Assignment Deadlines</h1>
+          <h1 className="page-title">Academic Projects, Assignments & Evaluations</h1>
           <p className="page-subtitle">
             {isStudent
-              ? 'View course assignments, track submission deadlines, and upload your academic deliverables'
-              : 'Create course projects, target student academic groups, manage deadlines, and evaluate submissions'}
+              ? 'View course assignments, download question paper PDFs, track deadlines, and submit deliverables directly from your device.'
+              : 'Create course projects, manage Subject Head allocations, upload instruction PDFs, and grade student submissions with automated competition ranking.'}
           </p>
         </div>
 
         {(isFaculty || isAdmin) && (
           <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary">
-            <Plus size={18} /> Create New Project
+            <Plus size={18} /> Create New Assignment
           </button>
         )}
       </div>
@@ -226,7 +311,7 @@ export default function ProjectsPage() {
       {(isFaculty || isAdmin) && (
         <div className="card" style={{ padding: '14px 20px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#142D4E', fontWeight: 600, fontSize: '0.9rem' }}>
-            <Filter size={18} color="#2563EB" /> Filter by Target Group:
+            <Filter size={18} color="#2563EB" /> Filter by Target Academic Group:
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -249,7 +334,7 @@ export default function ProjectsPage() {
             <label style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 500 }}>Semester:</label>
             <select
               className="form-select"
-              style={{ width: '120px', padding: '6px 10px', fontSize: '0.85rem' }}
+              style={{ width: '140px', padding: '6px 10px', fontSize: '0.85rem' }}
               value={filterSem}
               onChange={(e) => setFilterSem(e.target.value)}
             >
@@ -264,7 +349,7 @@ export default function ProjectsPage() {
             <label style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 500 }}>Section:</label>
             <select
               className="form-select"
-              style={{ width: '120px', padding: '6px 10px', fontSize: '0.85rem' }}
+              style={{ width: '130px', padding: '6px 10px', fontSize: '0.85rem' }}
               value={filterSection}
               onChange={(e) => setFilterSection(e.target.value)}
             >
@@ -275,24 +360,12 @@ export default function ProjectsPage() {
               <option value="D">Section D</option>
             </select>
           </div>
-
-          {(filterYear !== 'All' || filterSem !== 'All' || filterSection !== 'All') && (
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => {
-                setFilterYear('All');
-                setFilterSem('All');
-                setFilterSection('All');
-              }}
-            >
-              Reset Filters
-            </button>
-          )}
         </div>
       )}
 
+      {/* Projects Grid */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#2563EB', fontWeight: 600 }}>
+        <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748B' }}>
           Loading course projects...
         </div>
       ) : projects.length === 0 ? (
@@ -300,7 +373,7 @@ export default function ProjectsPage() {
           <FolderGit2 size={48} style={{ margin: '0 auto 12px', color: '#CBD5E1' }} />
           <h3 style={{ fontSize: '1.1rem', color: '#142D4E', fontWeight: 700 }}>No projects found</h3>
           <p style={{ fontSize: '0.88rem', marginTop: '4px' }}>
-            {isStudent ? 'No academic projects have been posted for your assigned academic group yet.' : 'Click "Create New Project" to assign an assignment.'}
+            {isStudent ? 'No academic projects have been posted for your assigned academic group yet.' : 'Click "Create New Assignment" to post an assignment.'}
           </p>
         </div>
       ) : (
@@ -308,6 +381,7 @@ export default function ProjectsPage() {
           {projects.map((p) => {
             const isDueSoon = p.daysRemaining <= 2 && !p.isOverdue;
             const targetGroupDisplay = `${p.academicYear || 'All Years'} • Sem ${p.semester || 'All'} • Sec ${p.section || 'All'}`;
+            const mySubmission = mySubmissionsMap[p.id];
 
             return (
               <div
@@ -323,9 +397,16 @@ export default function ProjectsPage() {
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#2563EB' }}>
-                      {p.course} • {p.department}
-                    </span>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2563EB' }}>
+                        {p.subjectName || p.course} &bull; {p.department}
+                      </span>
+                      {p.priority && (
+                        <span style={{ marginLeft: '8px', fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#EFF6FF', color: '#1D4ED8', padding: '2px 6px', borderRadius: '10px' }}>
+                          Priority: {p.priority} #{p.priorityRank || 1}
+                        </span>
+                      )}
+                    </div>
                     <Badge status={p.status} />
                   </div>
 
@@ -339,35 +420,60 @@ export default function ProjectsPage() {
                   </h3>
 
                   <div style={{ fontSize: '0.82rem', color: '#64748B', marginBottom: '12px' }}>
-                    Instructor: <strong>Prof. {p.facultyName}</strong>
+                    Instructor: <strong>Prof. {p.facultyName || 'Department Faculty'}</strong>
                   </div>
 
                   <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.5, marginBottom: '14px' }}>
                     {p.description}
                   </p>
 
-                  {p.submissionFormat && (
-                    <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '8px' }}>
-                      <strong>Format:</strong> {p.submissionFormat}
-                    </div>
-                  )}
-
-                  {p.instructions && (
-                    <div style={{ fontSize: '0.8rem', backgroundColor: '#F8FAFC', padding: '8px 12px', borderRadius: '6px', color: '#334155', marginBottom: '12px' }}>
-                      <strong>Guidelines:</strong> {p.instructions}
-                    </div>
-                  )}
-
-                  {p.attachmentUrl && (
+                  {/* Official Question Paper / Instruction PDF Download */}
+                  {p.pdfUrl && (
                     <div style={{ marginBottom: '12px' }}>
                       <a
-                        href={p.attachmentUrl}
+                        href={p.pdfUrl}
                         target="_blank"
                         rel="noreferrer"
-                        style={{ fontSize: '0.82rem', color: '#2563EB', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                        className="btn btn-secondary btn-sm"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          color: '#DC2626',
+                          borderColor: '#FECACA',
+                          backgroundColor: '#FEF2F2',
+                          textDecoration: 'none',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                        }}
                       >
-                        <LinkIcon size={14} /> Course Material / Reference Link
+                        <FileText size={14} /> Download Instructions (PDF)
                       </a>
+                    </div>
+                  )}
+
+                  {/* Student's Personal Evaluation Result (Private) */}
+                  {isStudent && mySubmission && mySubmission.score !== null && mySubmission.score !== undefined && (
+                    <div
+                      style={{
+                        backgroundColor: '#F0FDF4',
+                        border: '1px solid #86EFAC',
+                        borderRadius: '8px',
+                        padding: '12px',
+                        marginBottom: '14px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#15803D' }}>
+                          Evaluated: {mySubmission.score} / {mySubmission.maxScore || 100} pts ({mySubmission.grade})
+                        </div>
+                        {getRankBadge(mySubmission.rankPosition)}
+                      </div>
+                      {mySubmission.feedback && (
+                        <div style={{ fontSize: '0.78rem', color: '#166534', marginTop: '4px' }}>
+                          <strong>Faculty Feedback:</strong> {mySubmission.feedback}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -392,10 +498,10 @@ export default function ProjectsPage() {
                   {/* Student View Actions */}
                   {isStudent && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      {p.studentSubmitted ? (
+                      {p.studentSubmitted || mySubmission ? (
                         <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className={`badge ${p.studentSubmissionStatus === 'REVIEWED' ? 'badge-success' : p.studentSubmissionStatus === 'LATE' ? 'badge-warning' : 'badge-info'}`}>
-                            ✓ {p.studentSubmissionStatus === 'REVIEWED' ? 'Graded & Reviewed' : p.studentSubmissionStatus === 'LATE' ? 'Submitted Late' : 'Submitted'}
+                          <span className={`badge ${mySubmission?.score !== null && mySubmission?.score !== undefined ? 'badge-success' : 'badge-info'}`}>
+                            ✓ {mySubmission?.score !== null && mySubmission?.score !== undefined ? 'Graded & Evaluated' : 'Deliverable Submitted'}
                           </span>
                           <button
                             onClick={() => {
@@ -404,7 +510,7 @@ export default function ProjectsPage() {
                             }}
                             className="btn btn-secondary btn-sm"
                           >
-                            Update Submission
+                            Update Deliverable
                           </button>
                         </div>
                       ) : (
@@ -416,7 +522,7 @@ export default function ProjectsPage() {
                           className="btn btn-primary btn-sm"
                           style={{ width: '100%' }}
                         >
-                          <Send size={14} /> Submit Assignment
+                          <Send size={14} /> Submit Deliverable (PDF)
                         </button>
                       )}
                     </div>
@@ -433,7 +539,7 @@ export default function ProjectsPage() {
                         onClick={() => handleOpenReviews(p)}
                         className="btn btn-secondary btn-sm"
                       >
-                        <FileCheck2 size={14} /> Review ({p.totalSubmissions || 0})
+                        <FileCheck2 size={14} /> Review & Rank ({p.totalSubmissions || 0})
                       </button>
                     </div>
                   )}
@@ -448,8 +554,8 @@ export default function ProjectsPage() {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Create Academic Project / Assignment"
-        maxWidth="650px"
+        title="Create New Academic Assignment"
+        maxWidth="750px"
       >
         {modalError && (
           <div style={{ background: '#FEE2E2', color: '#DC2626', padding: '10px', borderRadius: '6px', marginBottom: '14px', fontSize: '0.85rem' }}>
@@ -459,43 +565,18 @@ export default function ProjectsPage() {
 
         <form onSubmit={handleCreateProject}>
           <div className="form-group">
-            <label className="form-label">Project Title</label>
+            <label className="form-label">Project / Assignment Title</label>
             <input
               type="text"
               className="form-input"
-              placeholder="e.g. Distributed Key-Value Store Implementation"
+              placeholder="e.g. Distributed Database Architecture Design"
               value={projectForm.title}
               onChange={(e) => setProjectForm({ ...projectForm, title: e.target.value })}
               required
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div className="form-group">
-              <label className="form-label">Target Department</label>
-              <input
-                type="text"
-                className="form-input"
-                value={projectForm.department}
-                onChange={(e) => setProjectForm({ ...projectForm, department: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Target Degree / Course</label>
-              <input
-                type="text"
-                className="form-input"
-                value={projectForm.course}
-                onChange={(e) => setProjectForm({ ...projectForm, course: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Academic Group Targeting */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '14px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Academic Year</label>
               <select
@@ -543,8 +624,8 @@ export default function ProjectsPage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div className="form-group">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Start Date</label>
               <input
                 type="date"
@@ -555,7 +636,7 @@ export default function ProjectsPage() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Submission Due Date</label>
               <input
                 type="date"
@@ -565,52 +646,55 @@ export default function ProjectsPage() {
                 required
               />
             </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Maximum Score</label>
+              <input
+                type="number"
+                min="10"
+                max="500"
+                className="form-input"
+                value={projectForm.maxScore}
+                onChange={(e) => setProjectForm({ ...projectForm, maxScore: e.target.value })}
+                required
+              />
+            </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Submission Format</label>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="e.g. GitHub Repository URL / PDF Report / ZIP Archive"
-              value={projectForm.submissionFormat}
-              onChange={(e) => setProjectForm({ ...projectForm, submissionFormat: e.target.value })}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Project Instructions & Description</label>
+          <div className="form-group" style={{ marginBottom: '14px' }}>
+            <label className="form-label">Project Description & Guidelines</label>
             <textarea
               rows="3"
               className="form-textarea"
-              placeholder="Overview of project requirements and milestones..."
+              placeholder="Overview of project requirements and deliverables..."
               value={projectForm.description}
               onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
               required
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Grading Criteria & Detailed Guidelines</label>
-            <textarea
-              rows="2"
-              className="form-textarea"
-              placeholder="Evaluation rubrics, code style requirements, bonus points..."
-              value={projectForm.instructions}
-              onChange={(e) => setProjectForm({ ...projectForm, instructions: e.target.value })}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Attachment / Reference URL</label>
-            <input
-              type="url"
-              className="form-input"
-              placeholder="https://example.com/project_spec.pdf"
-              value={projectForm.attachmentUrl}
-              onChange={(e) => setProjectForm({ ...projectForm, attachmentUrl: e.target.value })}
-            />
-          </div>
+          {/* Genuine PDF Upload Component for Faculty */}
+          <PdfUploader
+            fileCategory="PROJECT_INSTRUCTION"
+            label="Upload Instruction Paper / Question Specification PDF"
+            helperText="Upload official problem statement PDF (Max 10 MB)"
+            onUploadSuccess={(fileData) => {
+              setProjectForm((prev) => ({
+                ...prev,
+                pdfUrl: fileData.downloadUrl,
+                pdfFileName: fileData.originalFileName,
+                pdfFileSize: fileData.fileSize,
+              }));
+            }}
+            onRemove={() => {
+              setProjectForm((prev) => ({
+                ...prev,
+                pdfUrl: '',
+                pdfFileName: '',
+                pdfFileSize: 0,
+              }));
+            }}
+          />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
             <button
@@ -635,7 +719,8 @@ export default function ProjectsPage() {
       <Modal
         isOpen={isSubmitModalOpen}
         onClose={() => setIsSubmitModalOpen(false)}
-        title={`Submit Work: ${selectedProject?.title}`}
+        title={`Submit Deliverable: ${selectedProject?.title}`}
+        maxWidth="650px"
       >
         {modalError && (
           <div style={{ background: '#FEE2E2', color: '#DC2626', padding: '10px', borderRadius: '6px', marginBottom: '14px', fontSize: '0.85rem' }}>
@@ -647,35 +732,45 @@ export default function ProjectsPage() {
           <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', marginBottom: '14px', fontSize: '0.85rem' }}>
             <div>Due Date: <strong>{selectedProject?.dueDate}</strong></div>
             <div style={{ color: '#64748B', marginTop: '4px' }}>{selectedProject?.description}</div>
-            {selectedProject?.submissionFormat && (
-              <div style={{ color: '#2563EB', marginTop: '4px', fontWeight: 600 }}>
-                Format Required: {selectedProject.submissionFormat}
+            {selectedProject?.pdfUrl && (
+              <div style={{ marginTop: '8px' }}>
+                <a
+                  href={selectedProject.pdfUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: '#2563EB', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <FileText size={14} /> Review Instruction PDF
+                </a>
               </div>
             )}
           </div>
 
-          <div className="form-group">
+          <div className="form-group" style={{ marginBottom: '16px' }}>
             <label className="form-label">Submission Summary / Notes / Repository Link</label>
             <textarea
-              rows="4"
+              rows="3"
               className="form-textarea"
-              placeholder="Enter your implementation summary, GitHub repo URL, or documentation links here..."
+              placeholder="Implementation overview, GitHub repository URL, architecture summary..."
               value={submissionText}
               onChange={(e) => setSubmissionText(e.target.value)}
               required
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Deliverable File Name / Archive Name</label>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="e.g. project_report_final.pdf"
-              value={fileName}
-              onChange={(e) => setFileName(e.target.value)}
-            />
-          </div>
+          {/* Genuine Student PDF Upload Component */}
+          <PdfUploader
+            fileCategory="STUDENT_SUBMISSION"
+            entityId={selectedProject?.id}
+            label="Upload Deliverable Document (PDF from Device)"
+            helperText="Select your compiled PDF project report / assignment paper (Max 10 MB)"
+            onUploadSuccess={(fileData) => {
+              setStudentPdfData(fileData);
+            }}
+            onRemove={() => {
+              setStudentPdfData(null);
+            }}
+          />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
             <button
@@ -690,18 +785,18 @@ export default function ProjectsPage() {
               className="btn btn-primary"
               disabled={submitting}
             >
-              {submitting ? 'Submitting...' : 'Upload & Confirm Submission'}
+              {submitting ? 'Submitting...' : 'Confirm Submission'}
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* Faculty Submissions Review Modal */}
+      {/* Faculty Submissions Review & Ranking Modal */}
       <Modal
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
-        title={`Student Submissions: ${selectedProject?.title}`}
-        maxWidth="800px"
+        title={`Student Submissions & Class Ranking: ${selectedProject?.title}`}
+        maxWidth="900px"
       >
         {currentSubmissions.length === 0 ? (
           <div style={{ padding: '36px 0', textAlign: 'center', color: '#94A3B8' }}>
@@ -709,95 +804,201 @@ export default function ProjectsPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {currentSubmissions.map((s) => (
-              <div
-                key={s.id}
-                style={{
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '10px',
-                  padding: '16px',
-                  backgroundColor: '#FFFFFF',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <div>
-                    <strong style={{ fontSize: '1rem', color: '#142D4E' }}>{s.studentName}</strong>
-                    <span style={{ fontSize: '0.8rem', color: '#64748B', marginLeft: '8px' }}>
-                      ({s.studentRegistrationNumber})
-                    </span>
-                  </div>
-                  <Badge status={s.status} />
-                </div>
-
-                <div style={{ fontSize: '0.82rem', color: '#64748B', marginBottom: '10px' }}>
-                  Submitted on: {new Date(s.submissionDate).toLocaleString()} • File: <code>{s.fileName}</code>
-                </div>
-
-                <div style={{ backgroundColor: '#F8FAFC', padding: '10px 14px', borderRadius: '6px', fontSize: '0.85rem', color: '#334155', marginBottom: '12px' }}>
-                  {s.submissionText}
-                </div>
-
-                {s.grade && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px', backgroundColor: '#EFF6FF', padding: '8px 12px', borderRadius: '6px' }}>
-                    <span style={{ fontWeight: 700, color: '#2563EB' }}>Awarded Grade: {s.grade}</span>
-                    <span style={{ fontSize: '0.82rem', color: '#475569' }}>Feedback: {s.feedback}</span>
-                  </div>
-                )}
-
-                <button
-                  onClick={() => {
-                    setSelectedSubmission(s);
-                    setGrade(s.grade || 'A');
-                    setFeedback(s.feedback || '');
-                  }}
-                  className="btn btn-secondary btn-sm"
-                >
-                  <Award size={14} /> {s.grade ? 'Update Grade & Feedback' : 'Grade Deliverable'}
-                </button>
-              </div>
-            ))}
+            <div style={{ overflowX: 'auto' }}>
+              <table className="data-table" style={{ width: '100%', fontSize: '0.86rem' }}>
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Student Name</th>
+                    <th>Reg No</th>
+                    <th>Submitted PDF</th>
+                    <th>Score / Max</th>
+                    <th>Grade</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentSubmissions.map((s) => (
+                    <tr key={s.id}>
+                      <td>
+                        {getRankBadge(s.rankPosition) || <span style={{ color: '#94A3B8' }}>-</span>}
+                      </td>
+                      <td style={{ fontWeight: 600, color: '#142D4E' }}>{s.studentName}</td>
+                      <td style={{ color: '#64748B' }}>{s.studentRegistrationNumber}</td>
+                      <td>
+                        {s.fileUrl || s.pdfFilePath ? (
+                          <a
+                            href={s.fileUrl || s.pdfFilePath}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#2563EB', textDecoration: 'none', fontWeight: 600, fontSize: '0.8rem' }}
+                          >
+                            <Download size={14} /> {s.fileName || 'Download PDF'}
+                          </a>
+                        ) : (
+                          <span style={{ color: '#94A3B8' }}>No PDF attached</span>
+                        )}
+                      </td>
+                      <td style={{ fontWeight: 700, color: '#1E293B' }}>
+                        {s.score !== null && s.score !== undefined ? `${s.score} / ${s.maxScore || 100}` : '-'}
+                      </td>
+                      <td>
+                        {s.grade ? (
+                          <span style={{ fontWeight: 700, color: '#16A34A', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '10px' }}>
+                            {s.grade}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#94A3B8' }}>Ungraded</span>
+                        )}
+                      </td>
+                      <td>
+                        <Badge status={s.status} />
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => {
+                            setSelectedSubmission(s);
+                            setScore(s.score !== null && s.score !== undefined ? s.score : 85);
+                            setGrade(s.grade || 'A');
+                            setFeedback(s.feedback || '');
+                          }}
+                          className="btn btn-secondary btn-sm"
+                          style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+                        >
+                          Evaluate
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
-        {/* Grade sub-form */}
+        {/* Evaluation Sub-Form */}
         {selectedSubmission && (
-          <div style={{ marginTop: '20px', borderTop: '2px solid #E2E8F0', paddingTop: '16px' }}>
-            <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#142D4E', marginBottom: '12px' }}>
-              Evaluate {selectedSubmission.studentName} ({selectedSubmission.studentRegistrationNumber})
+          <div style={{ marginTop: '24px', borderTop: '2px solid #E2E8F0', paddingTop: '20px', backgroundColor: '#F8FAFC', padding: '20px', borderRadius: '10px' }}>
+            <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#142D4E', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Award size={18} color="#2563EB" />
+              Evaluate & Rank: {selectedSubmission.studentName} ({selectedSubmission.studentRegistrationNumber})
             </h4>
 
+            {selectedSubmission.submissionText && (
+              <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px', marginBottom: '16px', fontSize: '0.84rem' }}>
+                <strong>Student Submission Notes:</strong>
+                <p style={{ marginTop: '4px', color: '#475569', marginBottom: 0 }}>{selectedSubmission.submissionText}</p>
+              </div>
+            )}
+
             <form onSubmit={handleGradeSubmission}>
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label className="form-label">Grade</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Numeric Score (0 - {selectedProject?.maxScore || 100})</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={selectedProject?.maxScore || 100}
+                    step="0.5"
+                    className="form-input"
+                    value={score}
+                    onChange={(e) => setScore(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Letter Grade</label>
                   <select
                     className="form-select"
                     value={grade}
                     onChange={(e) => setGrade(e.target.value)}
                   >
-                    <option value="A+">A+</option>
-                    <option value="A">A</option>
-                    <option value="B+">B+</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="F">F</option>
+                    <option value="A+">A+ (Outstanding)</option>
+                    <option value="A">A (Excellent)</option>
+                    <option value="B+">B+ (Very Good)</option>
+                    <option value="B">B (Good)</option>
+                    <option value="C">C (Satisfactory)</option>
+                    <option value="D">D (Marginal)</option>
+                    <option value="F">F (Fail)</option>
                   </select>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Instructor Feedback</label>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Evaluation Mode</label>
+                  <select
+                    className="form-select"
+                    value={isDraft ? 'draft' : 'publish'}
+                    onChange={(e) => setIsDraft(e.target.value === 'draft')}
+                  >
+                    <option value="publish">Published to Student</option>
+                    <option value="draft">Draft (Private to Faculty)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Rubric Criteria Breakdown */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Code Quality (/30)</label>
                   <input
-                    type="text"
+                    type="number"
+                    min="0"
+                    max="30"
                     className="form-input"
-                    placeholder="Constructive feedback or commendations..."
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    required
+                    value={rubricQuality}
+                    onChange={(e) => setRubricQuality(e.target.value)}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Documentation (/30)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="30"
+                    className="form-input"
+                    value={rubricDoc}
+                    onChange={(e) => setRubricDoc(e.target.value)}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Execution (/30)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="30"
+                    className="form-input"
+                    value={rubricExecution}
+                    onChange={(e) => setRubricExecution(e.target.value)}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Presentation (/10)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    className="form-input"
+                    value={rubricPresentation}
+                    onChange={(e) => setRubricPresentation(e.target.value)}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label className="form-label">Qualitative Instructor Feedback</label>
+                <textarea
+                  rows="2"
+                  className="form-textarea"
+                  placeholder="Provide constructive assessment comments and improvement areas..."
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
@@ -805,8 +1006,8 @@ export default function ProjectsPage() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-teal btn-sm">
-                  Save Evaluation
+                <button type="submit" className="btn btn-primary btn-sm">
+                  Save Evaluation & Recalculate Class Ranks
                 </button>
               </div>
             </form>

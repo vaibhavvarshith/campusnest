@@ -12,6 +12,7 @@ public class UserResponse {
     private String role;
     private Boolean isActive;
     private Boolean firstLogin;
+    private Boolean isSubjectHead = false;
     // Student specifics
     private Long studentId;
     private String registrationNumber;
@@ -54,6 +55,9 @@ public class UserResponse {
 
     public Boolean getFirstLogin() { return firstLogin; }
     public void setFirstLogin(Boolean firstLogin) { this.firstLogin = firstLogin; }
+
+    public Boolean getIsSubjectHead() { return isSubjectHead; }
+    public void setIsSubjectHead(Boolean isSubjectHead) { this.isSubjectHead = isSubjectHead; }
 
     public Long getStudentId() { return studentId; }
     public void setStudentId(Long studentId) { this.studentId = studentId; }

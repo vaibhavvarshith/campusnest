@@ -34,3 +34,8 @@ Thumbs.db
 *.log
 logs/
 scratch/
+test_*.pdf
+
+# Runtime Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep

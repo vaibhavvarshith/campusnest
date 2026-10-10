@@ -24,6 +24,9 @@ import NotificationsPage from './pages/NotificationsPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import ProfilePage from './pages/ProfilePage';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import SubjectHeadDashboard from './pages/SubjectHeadDashboard';
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
@@ -73,6 +76,7 @@ function ProtectedLayout() {
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/subject-head" element={<SubjectHeadDashboard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
@@ -92,6 +96,8 @@ export default function App() {
             <Route path="/librarian/login" element={<PortalLogin portal="librarian" />} />
             <Route path="/student/login" element={<PortalLogin portal="student" />} />
             <Route path="/faculty/login" element={<PortalLogin portal="faculty" />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/*" element={<ProtectedLayout />} />
           </Routes>
         </NotificationProvider>

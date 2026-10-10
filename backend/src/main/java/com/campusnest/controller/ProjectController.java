@@ -27,25 +27,25 @@ public class ProjectController {
     }
 
     @PostMapping({"/projects", "/faculty/projects"})
-    @PreAuthorize("hasAnyRole('FACULTY', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('FACULTY', 'ADMIN', 'SUBJECT_HEAD')")
     public ResponseEntity<ApiResponse<ProjectResponse>> createProject(
             @Valid @RequestBody ProjectRequest request,
             @AuthenticationPrincipal UserPrincipal facultyPrincipal) {
         ProjectResponse response = projectService.createProject(request, facultyPrincipal);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Project created successfully", response));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Academic project created successfully", response));
     }
 
     @PutMapping({"/projects/{id}", "/faculty/projects/{id}"})
-    @PreAuthorize("hasAnyRole('FACULTY', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('FACULTY', 'ADMIN', 'SUBJECT_HEAD')")
     public ResponseEntity<ApiResponse<ProjectResponse>> updateProject(
             @PathVariable Long id,
             @Valid @RequestBody ProjectRequest request,
             @AuthenticationPrincipal UserPrincipal facultyPrincipal) {
         ProjectResponse response = projectService.updateProject(id, request, facultyPrincipal);
-        return ResponseEntity.ok(ApiResponse.ok("Project updated successfully", response));
+        return ResponseEntity.ok(ApiResponse.ok("Academic project updated successfully", response));
     }
 
-    @GetMapping({"/projects", "/projects/my"})
+    @GetMapping("/projects")
     public ResponseEntity<ApiResponse<PagedResponse<ProjectResponse>>> getProjects(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(required = false) String academicYear,
@@ -67,8 +67,8 @@ public class ProjectController {
         }
     }
 
-    @GetMapping("/faculty/projects")
-    @PreAuthorize("hasAnyRole('FACULTY', 'ADMIN')")
+    @GetMapping({"/faculty/projects", "/faculty/my-assigned-projects"})
+    @PreAuthorize("hasAnyRole('FACULTY', 'ADMIN', 'SUBJECT_HEAD')")
     public ResponseEntity<ApiResponse<PagedResponse<ProjectResponse>>> getFacultyProjects(
             @AuthenticationPrincipal UserPrincipal facultyPrincipal,
             @RequestParam(required = false) String academicYear,
@@ -125,7 +125,7 @@ public class ProjectController {
     }
 
     @GetMapping({"/projects/{id}/submissions", "/faculty/projects/{id}/submissions"})
-    @PreAuthorize("hasAnyRole('FACULTY', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('FACULTY', 'ADMIN', 'SUBJECT_HEAD')")
     public ResponseEntity<ApiResponse<List<SubmissionResponse>>> getProjectSubmissions(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal facultyPrincipal) {
@@ -133,13 +133,13 @@ public class ProjectController {
         return ResponseEntity.ok(ApiResponse.ok(responses));
     }
 
-    @PostMapping({"/projects/submissions/{id}/review", "/faculty/projects/submissions/{id}/grade"})
-    @PreAuthorize("hasAnyRole('FACULTY', 'ADMIN')")
+    @PostMapping({"/projects/submissions/{id}/review", "/faculty/projects/submissions/{id}/grade", "/faculty/projects/submissions/{id}/evaluate"})
+    @PreAuthorize("hasAnyRole('FACULTY', 'ADMIN', 'SUBJECT_HEAD')")
     public ResponseEntity<ApiResponse<SubmissionResponse>> gradeSubmission(
             @PathVariable Long id,
             @Valid @RequestBody GradeSubmissionRequest request,
             @AuthenticationPrincipal UserPrincipal facultyPrincipal) {
         SubmissionResponse response = projectService.gradeSubmission(id, request, facultyPrincipal);
-        return ResponseEntity.ok(ApiResponse.ok("Submission evaluated successfully", response));
+        return ResponseEntity.ok(ApiResponse.ok("Submission evaluated and ranked successfully", response));
     }
 }

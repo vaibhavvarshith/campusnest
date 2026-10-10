@@ -9,6 +9,7 @@ public class AuthResponse {
     private String email;
     private String role;
     private Boolean firstLogin;
+    private Boolean isSubjectHead = false;
     private Long studentId;
     private Long facultyId;
     private String identifier; // Registration number or employee ID
@@ -39,6 +40,9 @@ public class AuthResponse {
 
     public Boolean getFirstLogin() { return firstLogin; }
     public void setFirstLogin(Boolean firstLogin) { this.firstLogin = firstLogin; }
+
+    public Boolean getIsSubjectHead() { return isSubjectHead; }
+    public void setIsSubjectHead(Boolean isSubjectHead) { this.isSubjectHead = isSubjectHead; }
 
     public Long getStudentId() { return studentId; }
     public void setStudentId(Long studentId) { this.studentId = studentId; }

@@ -5,8 +5,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 public class UserPrincipal implements UserDetails {
 
@@ -18,10 +19,18 @@ public class UserPrincipal implements UserDetails {
     private final String role;
     private final boolean isActive;
     private final boolean firstLogin;
+    private final boolean isSubjectHead;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public UserPrincipal(Long id, String username, String password, String fullName,
                          String email, String role, boolean isActive, boolean firstLogin,
+                         Collection<? extends GrantedAuthority> authorities) {
+        this(id, username, password, fullName, email, role, isActive, firstLogin, false, authorities);
+    }
+
+    public UserPrincipal(Long id, String username, String password, String fullName,
+                         String email, String role, boolean isActive, boolean firstLogin,
+                         boolean isSubjectHead,
                          Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
@@ -31,12 +40,21 @@ public class UserPrincipal implements UserDetails {
         this.role = role;
         this.isActive = isActive;
         this.firstLogin = firstLogin;
+        this.isSubjectHead = isSubjectHead;
         this.authorities = authorities;
     }
 
     public static UserPrincipal create(User user) {
+        return create(user, false);
+    }
+
+    public static UserPrincipal create(User user, boolean isSubjectHead) {
         String roleName = user.getRole().getName();
-        GrantedAuthority authority = new SimpleGrantedAuthority(roleName);
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority(roleName));
+        if (isSubjectHead) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_SUBJECT_HEAD"));
+        }
 
         return new UserPrincipal(
                 user.getId(),
@@ -47,7 +65,8 @@ public class UserPrincipal implements UserDetails {
                 roleName,
                 user.getIsActive(),
                 user.getFirstLogin(),
-                Collections.singletonList(authority)
+                isSubjectHead,
+                authorities
         );
     }
 
@@ -56,6 +75,7 @@ public class UserPrincipal implements UserDetails {
     public String getEmail() { return email; }
     public String getRole() { return role; }
     public boolean isFirstLogin() { return firstLogin; }
+    public boolean isSubjectHead() { return isSubjectHead; }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() { return authorities; }

@@ -114,9 +114,11 @@ public class AutomatedReminderScheduler {
         for (Project project : projectsDueInTwoDays) {
             List<Student> targetStudents = getAssignedUnsubmittedStudents(project);
             for (Student student : targetStudents) {
+                String subjectLabel = project.getSubjectName() != null && !project.getSubjectName().isBlank()
+                        ? project.getSubjectName() : project.getTitle();
                 String title = "Academic Project Due in 2 Days";
-                String message = String.format("Reminder: Your submission for project \"%s\" is due in 2 days, on %s. Please submit before the deadline.",
-                        project.getTitle(), project.getDueDate().format(DATE_FORMATTER));
+                String message = String.format("Reminder: Your %s assignment is due in 2 days. Please review the assignment PDF and submit your work before the deadline.",
+                        subjectLabel);
 
                 notificationService.createNotification(
                         student.getUser(), title, message, "PROJECT_DEADLINE_2DAYS", project.getId(), "PROJECT"
@@ -129,9 +131,11 @@ public class AutomatedReminderScheduler {
         for (Project project : projectsDueToday) {
             List<Student> targetStudents = getAssignedUnsubmittedStudents(project);
             for (Student student : targetStudents) {
-                String title = "Academic Project Due Today";
-                String message = String.format("Final Reminder: Project \"%s\" is due today (%s). Please submit your work before midnight.",
-                        project.getTitle(), project.getDueDate().format(DATE_FORMATTER));
+                String subjectLabel = project.getSubjectName() != null && !project.getSubjectName().isBlank()
+                        ? project.getSubjectName() : project.getTitle();
+                String title = "Academic Assignment Due Today";
+                String message = String.format("Final Reminder: Your %s assignment is due today (%s). Please submit your deliverable before midnight.",
+                        subjectLabel, project.getDueDate().format(DATE_FORMATTER));
 
                 notificationService.createNotification(
                         student.getUser(), title, message, "PROJECT_DUE_TODAY", project.getId(), "PROJECT"

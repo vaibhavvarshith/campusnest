@@ -63,14 +63,17 @@ flowchart TD
 - **Overdue Alerts:** Instantly transitions expired loans to `OVERDUE`, creates daily fine ledgers, and dispatches disciplinary notifications.
 - **Idempotent Prevention:** Internal tracking ensures patrons receive exactly one reminder per deadline cycle.
 
-### 4. Academic Projects & Assignment Submissions
-- Faculty create department-wide course projects with target submission deadlines.
-- Students upload their project deliverables (GitHub repository links, drive links, and implementation notes).
-- Faculty view live submission feeds, download links, and grade/review student submissions in real time.
+### 4. Academic Projects, Question Papers & PDF Submissions
+- **Subject Head Governance:** Senior department faculty (`ROLE_SUBJECT_HEAD`) manage subject portfolios, allocate assignments to professors, set priority rank (e.g. High #1), and enforce academic group targets.
+- **Genuine Device PDF Uploads:** True multipart upload supporting question paper specifications and student deliverables up to 10MB, guarded by `%PDF-` magic byte inspection and safe filesystem storage.
+- **Target Academic Groups:** Strict scoping by Academic Year (First to Fourth Year), Semester (1 to 8), and Section (A to D).
+- **Faculty Evaluation & Ranking:** Comprehensive rubric-based scoring (0-100 or custom maxScore), letter grade, qualitative feedback, and automated competition ranking (`1st, 2nd, 2nd, 4th` tie policy) with private student views.
 
-### 5. First-Time Login Password Security
-- Students are initialized with their Date of Birth (`DDMMYYYY`) as their initial credential.
-- Upon first successful authentication, a mandatory security modal intercepts navigation, requiring a custom strong password change before granting dashboard access.
+### 5. Secure Password Reset Workflow & First-Time Login
+- **Universal Password Recovery:** All 4 portals (`/admin/login`, `/librarian/login`, `/student/login`, `/faculty/login`) feature prominent password recovery.
+- **Anti-Enumeration Security:** Generic response protects against user account enumeration; time-limited (15 min) single-use cryptographic tokens prevent replay attacks.
+- **Password Complexity Validation:** Requires 8+ characters, uppercase, lowercase, numbers, and special characters before BCrypt hashing.
+- **Default Bootstrap:** Pre-configured local dev accounts `admin` (`admin123`) and `librarian` (`librarian123`) requiring first-login change, preserving user passwords across server restarts.
 
 ---
 
@@ -80,27 +83,25 @@ CampusNest implements strict role-based authorization across all backend REST en
 
 | Role | Access Scope | Key Capabilities |
 | :--- | :--- | :--- |
-| **Admin / Librarian** | Whole Campus | Issue/Return books, manage 103-book catalog, manage students & faculty, collect fines & issue receipts, trigger manual scheduler runs, export audit reports. |
-| **Student** | Personal Academic Portal | Browse 20 book categories, check out books, track return countdowns, view pending fines, submit course projects, receive return reminders. |
-| **Faculty** | Department Portal | Browse library catalog, extended 30-day borrowing, create class projects & assignments, review & grade student project submissions. |
+| **Admin** | Whole Campus | User governance, library settings, institutional audits, and complete circulation desk access. |
+| **Librarian** | Library & Circulation | Issue/Return desk, 103-book catalog, borrow approvals, overdue audit, fine receipts (`REC-...`). |
+| **Subject Head** | Department Curriculum | Portfolio governance, faculty assignment allocation, priority ranking, and syllabus PDF publishing. |
+| **Faculty** | Department Portal | 30-day loans, review assigned curriculum tasks, grade student submissions with automated competition ranking. |
+| **Student** | Personal Academic Portal | Borrow textbooks, return countdowns, upload PDF deliverables, view private grades & class ranks. |
 
 ---
 
-## 🔑 Demo Accounts & Seed Credentials
+## 🔑 Default Credentials & Development Accounts
 
-The database comes pre-seeded with 8 verified accounts ready for immediate demonstration:
-
-| Role | Username | Initial Password | Description |
+| Portal | Username / ID | Initial Password | Role / Access Details |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin` | `AdminPassword123!` | Head Librarian with complete administrative privileges |
-| **Student** | `STU2026001` | `15082006` *(DOB)* or `StudentPassword123!` | Arjun Sharma (Computer Science, Year 3) |
-| **Student** | `STU2026002` | `22112005` *(DOB)* or `StudentPassword123!` | Priya Patel (Electronics, Year 3) |
-| **Student** | `STU2026003` | `10042006` *(DOB)* or `StudentPassword123!` | Rohan Verma (Information Technology, Year 2) |
-| **Faculty** | `FAC2026001` | `FacultyPassword123!` | Dr. Rajesh Kumar (Professor, Computer Science) |
-| **Faculty** | `FAC2026002` | `FacultyPassword123!` | Prof. Sunita Rao (Associate Professor, Electronics) |
-
-*(Note: On the login page, handy **One-Click Demo Login** pill buttons are provided to instantly populate credentials for Admin, Arjun, Priya, and Dr. Rajesh).*
-
+| **Administrator** | `admin` | `admin123` | System Administrator (Mandatory First-Login Password Change) |
+| **Librarian** | `librarian` | `librarian123` | Chief Circulation Desk Librarian |
+| **Subject Head** | `FAC2026001` | `FacultyPass123@` | Dr. Rajesh Kumar (Head of CSE & Subject Head) |
+| **Faculty Member**| `FAC2026002` | `FacultyPassword123!` | Prof. Anita Deshmukh (Associate Professor, IT) |
+| **Faculty Member**| `FAC2026003` | `FacultyPassword123!` | Prof. Sathya (Assistant Professor, CSE) |
+| **Student** | `STU2026001` | `NewStudentPass123@` | Arjun Sharma (CSE, 3rd Year, Semester 6, Section A) |
+| **Student** | `STU2026002` | `22112005` *(DOB)* | Priya Patel (Electronics, 3rd Year) |
 ---
 
 ## 📚 Seeded Book Catalogue (103 Books, 20 Categories)

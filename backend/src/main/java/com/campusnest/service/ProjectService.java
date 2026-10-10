@@ -9,7 +9,9 @@ import com.campusnest.exception.UnauthorizedException;
 import com.campusnest.repository.*;
 import com.campusnest.security.UserPrincipal;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,25 +28,24 @@ public class ProjectService {
     private final ProjectSubmissionRepository submissionRepository;
     private final FacultyRepository facultyRepository;
     private final StudentRepository studentRepository;
+    private final NotificationRepository notificationRepository;
 
     public ProjectService(ProjectRepository projectRepository,
                           ProjectSubmissionRepository submissionRepository,
                           FacultyRepository facultyRepository,
-                          StudentRepository studentRepository) {
+                          StudentRepository studentRepository,
+                          NotificationRepository notificationRepository) {
         this.projectRepository = projectRepository;
         this.submissionRepository = submissionRepository;
         this.facultyRepository = facultyRepository;
         this.studentRepository = studentRepository;
+        this.notificationRepository = notificationRepository;
     }
 
     @Transactional
     public ProjectResponse createProject(ProjectRequest request, UserPrincipal facultyPrincipal) {
         Faculty faculty = facultyRepository.findByUserId(facultyPrincipal.getId())
-                .orElseThrow(() -> new UnauthorizedException("Only registered faculty can create projects"));
-
-        if (request.getDueDate().isBefore(request.getStartDate())) {
-            throw new BadRequestException("Due date cannot be before start date");
-        }
+                .orElseThrow(() -> new UnauthorizedException("Only faculty can create projects"));
 
         Project project = new Project();
         project.setFaculty(faculty);
@@ -52,15 +53,23 @@ public class ProjectService {
         project.setDescription(request.getDescription());
         project.setDepartment(request.getDepartment());
         project.setCourse(request.getCourse());
+        project.setSubjectName(request.getSubjectName() != null && !request.getSubjectName().isBlank() ? request.getSubjectName() : "Computer Science");
         project.setAcademicYear(request.getAcademicYear() != null && !request.getAcademicYear().isBlank() ? request.getAcademicYear() : "Third Year");
         project.setSemester(request.getSemester() != null ? request.getSemester() : 6);
         project.setSection(request.getSection() != null && !request.getSection().isBlank() ? request.getSection() : "A");
         project.setInstructions(request.getInstructions());
-        project.setSubmissionFormat(request.getSubmissionFormat() != null && !request.getSubmissionFormat().isBlank() ? request.getSubmissionFormat() : "GitHub Repository / PDF Report");
+        project.setSubmissionFormat(request.getSubmissionFormat() != null && !request.getSubmissionFormat().isBlank() ? request.getSubmissionFormat() : "PDF Document / Report");
         project.setAttachmentUrl(request.getAttachmentUrl());
+        project.setPdfUrl(request.getPdfUrl());
+        project.setPdfFileName(request.getPdfFileName());
+        project.setPdfFileSize(request.getPdfFileSize());
+        project.setPriority(request.getPriority() != null ? request.getPriority() : "MEDIUM");
+        project.setPriorityRank(request.getPriorityRank() != null ? request.getPriorityRank() : 1);
+        project.setMaxScore(request.getMaxScore() != null ? request.getMaxScore() : 100);
+        project.setAllocationNotes(request.getAllocationNotes());
         project.setStartDate(request.getStartDate());
         project.setDueDate(request.getDueDate());
-        project.setStatus("ACTIVE");
+        project.setStatus(request.getStatus() != null && !request.getStatus().isBlank() ? request.getStatus() : "PUBLISHED");
 
         Project saved = projectRepository.save(project);
         return mapToResponse(saved, null);
@@ -82,6 +91,9 @@ public class ProjectService {
         project.setDescription(request.getDescription());
         project.setDepartment(request.getDepartment());
         project.setCourse(request.getCourse());
+        if (request.getSubjectName() != null && !request.getSubjectName().isBlank()) {
+            project.setSubjectName(request.getSubjectName());
+        }
         if (request.getAcademicYear() != null && !request.getAcademicYear().isBlank()) {
             project.setAcademicYear(request.getAcademicYear());
         }
@@ -99,6 +111,23 @@ public class ProjectService {
         }
         if (request.getAttachmentUrl() != null) {
             project.setAttachmentUrl(request.getAttachmentUrl());
+        }
+        if (request.getPdfUrl() != null) {
+            project.setPdfUrl(request.getPdfUrl());
+            project.setPdfFileName(request.getPdfFileName());
+            project.setPdfFileSize(request.getPdfFileSize());
+        }
+        if (request.getPriority() != null) {
+            project.setPriority(request.getPriority());
+        }
+        if (request.getPriorityRank() != null) {
+            project.setPriorityRank(request.getPriorityRank());
+        }
+        if (request.getMaxScore() != null) {
+            project.setMaxScore(request.getMaxScore());
+        }
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            project.setStatus(request.getStatus());
         }
         project.setStartDate(request.getStartDate());
         project.setDueDate(request.getDueDate());
@@ -181,9 +210,38 @@ public class ProjectService {
         submission.setFileUrl(request.getFileUrl());
         submission.setFileName(request.getFileName());
         submission.setFileSize(request.getFileSize());
+        submission.setMaxScore(project.getMaxScore() != null ? project.getMaxScore() : 100);
         submission.setStatus(status);
+        if (submission.getEvaluationStatus() == null) {
+            submission.setEvaluationStatus("PENDING");
+        }
 
         ProjectSubmission saved = submissionRepository.save(submission);
+
+        // Notify student of submission confirmation
+        Notification studentNotif = new Notification();
+        studentNotif.setUser(student.getUser());
+        studentNotif.setTitle("Assignment Submission Confirmed");
+        studentNotif.setMessage(String.format("Your deliverable for '%s' (%s) was uploaded successfully.",
+                project.getTitle(), project.getSubjectName()));
+        studentNotif.setType("SUBMISSION_CONFIRMED");
+        studentNotif.setReferenceId(saved.getId());
+        studentNotif.setReferenceType("SUBMISSION");
+        notificationRepository.save(studentNotif);
+
+        // Notify faculty of incoming submission
+        if (project.getFaculty() != null && project.getFaculty().getUser() != null) {
+            Notification facNotif = new Notification();
+            facNotif.setUser(project.getFaculty().getUser());
+            facNotif.setTitle("New Student Deliverable Received");
+            facNotif.setMessage(String.format("%s (%s) submitted work for '%s'.",
+                    student.getUser().getFullName(), student.getRegistrationNumber(), project.getTitle()));
+            facNotif.setType("STUDENT_SUBMITTED");
+            facNotif.setReferenceId(saved.getId());
+            facNotif.setReferenceType("SUBMISSION");
+            notificationRepository.save(facNotif);
+        }
+
         return mapToSubmissionResponse(saved);
     }
 
@@ -195,11 +253,15 @@ public class ProjectService {
         Faculty faculty = facultyRepository.findByUserId(facultyPrincipal.getId())
                 .orElseThrow(() -> new UnauthorizedException("Only faculty can view submissions"));
 
-        if (!project.getFaculty().getId().equals(faculty.getId()) && !"ROLE_ADMIN".equals(facultyPrincipal.getRole())) {
+        boolean isAssignedFaculty = project.getFaculty().getId().equals(faculty.getId());
+        boolean isSubjectHead = project.getSubjectHead() != null && project.getSubjectHead().getId().equals(faculty.getId());
+        boolean isAdmin = "ROLE_ADMIN".equals(facultyPrincipal.getRole());
+
+        if (!isAssignedFaculty && !isSubjectHead && !isAdmin) {
             throw new UnauthorizedException("You do not have access to these submissions");
         }
 
-        return submissionRepository.findByProjectId(projectId).stream()
+        return submissionRepository.findByProjectIdOrderByScoreDesc(projectId).stream()
                 .map(this::mapToSubmissionResponse)
                 .toList();
     }
@@ -212,16 +274,72 @@ public class ProjectService {
         Faculty faculty = facultyRepository.findByUserId(facultyPrincipal.getId())
                 .orElseThrow(() -> new UnauthorizedException("Only faculty can grade submissions"));
 
-        if (!submission.getProject().getFaculty().getId().equals(faculty.getId()) && !"ROLE_ADMIN".equals(facultyPrincipal.getRole())) {
+        Project project = submission.getProject();
+        boolean isAssignedFaculty = project.getFaculty().getId().equals(faculty.getId());
+        boolean isSubjectHead = project.getSubjectHead() != null && project.getSubjectHead().getId().equals(faculty.getId());
+        boolean isAdmin = "ROLE_ADMIN".equals(facultyPrincipal.getRole());
+
+        if (!isAssignedFaculty && !isSubjectHead && !isAdmin) {
             throw new UnauthorizedException("You do not have permission to grade this submission");
         }
 
+        if (request.getScore() != null && request.getScore() > project.getMaxScore()) {
+            throw new BadRequestException("Score cannot exceed maximum assignment score of " + project.getMaxScore());
+        }
+
+        submission.setScore(request.getScore());
         submission.setGrade(request.getGrade());
         submission.setFeedback(request.getFeedback());
+        submission.setRubricMarks(request.getRubricMarks());
+        submission.setEvaluatedBy(faculty);
+        submission.setEvaluatedAt(LocalDateTime.now());
+
+        boolean isDraft = Boolean.TRUE.equals(request.getIsDraft());
+        submission.setEvaluationStatus(isDraft ? "DRAFT" : "EVALUATED");
         submission.setStatus("REVIEWED");
 
         ProjectSubmission updated = submissionRepository.save(submission);
-        return mapToSubmissionResponse(updated);
+
+        // Recalculate competition ranks (1, 2, 2, 4) among evaluated submissions of this project
+        recalculateProjectSubmissionRanks(project.getId());
+
+        // Refresh updated entity
+        ProjectSubmission refreshed = submissionRepository.findById(submissionId).orElse(updated);
+
+        // Notify student if evaluation is published (not draft)
+        if (!isDraft) {
+            Notification notification = new Notification();
+            notification.setUser(submission.getStudent().getUser());
+            notification.setTitle("Assignment Evaluated & Ranked");
+            notification.setMessage(String.format("Your submission for '%s' was evaluated by Prof. %s. Score: %.1f/%d, Grade: %s, Rank: #%s",
+                    project.getTitle(), faculty.getUser().getFullName(),
+                    refreshed.getScore() != null ? refreshed.getScore() : 0.0,
+                    project.getMaxScore(),
+                    refreshed.getGrade() != null ? refreshed.getGrade() : "N/A",
+                    refreshed.getRankPosition() != null ? refreshed.getRankPosition() : 1));
+            notification.setType("SUBMISSION_EVALUATED");
+            notification.setReferenceId(refreshed.getId());
+            notification.setReferenceType("SUBMISSION");
+            notificationRepository.save(notification);
+        }
+
+        return mapToSubmissionResponse(refreshed);
+    }
+
+    private void recalculateProjectSubmissionRanks(Long projectId) {
+        List<ProjectSubmission> evaluatedList = submissionRepository.findByProjectIdOrderByScoreDesc(projectId).stream()
+                .filter(s -> s.getScore() != null)
+                .toList();
+
+        for (int i = 0; i < evaluatedList.size(); i++) {
+            ProjectSubmission current = evaluatedList.get(i);
+            if (i > 0 && current.getScore().equals(evaluatedList.get(i - 1).getScore())) {
+                current.setRankPosition(evaluatedList.get(i - 1).getRankPosition());
+            } else {
+                current.setRankPosition(i + 1);
+            }
+            submissionRepository.save(current);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -237,9 +355,16 @@ public class ProjectService {
     public ProjectResponse mapToResponse(Project project, Student currentStudent) {
         ProjectResponse r = new ProjectResponse();
         r.setId(project.getId());
-        r.setFacultyId(project.getFaculty().getId());
-        r.setFacultyName(project.getFaculty().getUser().getFullName());
-        r.setFacultyEmployeeId(project.getFaculty().getEmployeeId());
+        r.setFacultyId(project.getFaculty() != null ? project.getFaculty().getId() : null);
+        r.setFacultyName(project.getFaculty() != null ? project.getFaculty().getUser().getFullName() : "Unassigned");
+        r.setFacultyEmployeeId(project.getFaculty() != null ? project.getFaculty().getEmployeeId() : null);
+
+        if (project.getSubjectHead() != null) {
+            r.setSubjectHeadId(project.getSubjectHead().getId());
+            r.setSubjectHeadName(project.getSubjectHead().getUser().getFullName());
+        }
+
+        r.setSubjectName(project.getSubjectName());
         r.setTitle(project.getTitle());
         r.setDescription(project.getDescription());
         r.setDepartment(project.getDepartment());
@@ -250,6 +375,13 @@ public class ProjectService {
         r.setInstructions(project.getInstructions());
         r.setSubmissionFormat(project.getSubmissionFormat());
         r.setAttachmentUrl(project.getAttachmentUrl());
+        r.setPdfUrl(project.getPdfUrl());
+        r.setPdfFileName(project.getPdfFileName());
+        r.setPdfFileSize(project.getPdfFileSize());
+        r.setPriority(project.getPriority());
+        r.setPriorityRank(project.getPriorityRank());
+        r.setMaxScore(project.getMaxScore());
+        r.setAllocationNotes(project.getAllocationNotes());
         r.setStartDate(project.getStartDate());
         r.setDueDate(project.getDueDate());
         r.setStatus(project.getStatus());
@@ -279,6 +411,8 @@ public class ProjectService {
                     .ifPresent(s -> {
                         r.setStudentSubmitted(true);
                         r.setStudentSubmissionStatus(s.getStatus());
+                        r.setStudentScore(s.getScore());
+                        r.setStudentRank(s.getRankPosition());
                     });
             if (r.getStudentSubmitted() == null) {
                 r.setStudentSubmitted(false);
@@ -294,18 +428,33 @@ public class ProjectService {
         r.setId(s.getId());
         r.setProjectId(s.getProject().getId());
         r.setProjectTitle(s.getProject().getTitle());
+        r.setSubjectName(s.getProject().getSubjectName());
         r.setStudentId(s.getStudent().getId());
         r.setStudentName(s.getStudent().getUser().getFullName());
         r.setStudentRegistrationNumber(s.getStudent().getRegistrationNumber());
         r.setStudentDepartment(s.getStudent().getDepartment());
+        r.setAcademicYear(s.getStudent().getAcademicYear());
+        r.setSemester(s.getStudent().getSemester());
+        r.setSection(s.getStudent().getSection());
         r.setSubmissionDate(s.getSubmissionDate());
         r.setSubmissionText(s.getSubmissionText());
         r.setFileUrl(s.getFileUrl());
         r.setFileName(s.getFileName());
         r.setFileSize(s.getFileSize());
+        r.setPdfFilePath(s.getPdfFilePath());
         r.setStatus(s.getStatus());
+        r.setScore(s.getScore());
+        r.setMaxScore(s.getMaxScore());
+        r.setRankPosition(s.getRankPosition());
         r.setGrade(s.getGrade());
         r.setFeedback(s.getFeedback());
+        r.setRubricMarks(s.getRubricMarks());
+        r.setEvaluationStatus(s.getEvaluationStatus());
+        if (s.getEvaluatedBy() != null) {
+            r.setEvaluatedById(s.getEvaluatedBy().getId());
+            r.setEvaluatedByName(s.getEvaluatedBy().getUser().getFullName());
+        }
+        r.setEvaluatedAt(s.getEvaluatedAt());
         r.setCreatedAt(s.getCreatedAt());
         return r;
     }

@@ -8,6 +8,9 @@ public class ProjectResponse {
     private Long facultyId;
     private String facultyName;
     private String facultyEmployeeId;
+    private Long subjectHeadId;
+    private String subjectHeadName;
+    private String subjectName;
     private String title;
     private String description;
     private String department;
@@ -19,6 +22,13 @@ public class ProjectResponse {
     private String instructions;
     private String submissionFormat;
     private String attachmentUrl;
+    private String pdfUrl;
+    private String pdfFileName;
+    private Long pdfFileSize;
+    private String priority;
+    private Integer priorityRank;
+    private Integer maxScore;
+    private String allocationNotes;
     private LocalDate startDate;
     private LocalDate dueDate;
     private Long daysRemaining;
@@ -30,6 +40,8 @@ public class ProjectResponse {
     private Long assignedStudentCount;
     private Boolean studentSubmitted;
     private String studentSubmissionStatus;
+    private Double studentScore;
+    private Integer studentRank;
     private LocalDateTime createdAt;
 
     public ProjectResponse() {}
@@ -45,6 +57,15 @@ public class ProjectResponse {
 
     public String getFacultyEmployeeId() { return facultyEmployeeId; }
     public void setFacultyEmployeeId(String facultyEmployeeId) { this.facultyEmployeeId = facultyEmployeeId; }
+
+    public Long getSubjectHeadId() { return subjectHeadId; }
+    public void setSubjectHeadId(Long subjectHeadId) { this.subjectHeadId = subjectHeadId; }
+
+    public String getSubjectHeadName() { return subjectHeadName; }
+    public void setSubjectHeadName(String subjectHeadName) { this.subjectHeadName = subjectHeadName; }
+
+    public String getSubjectName() { return subjectName; }
+    public void setSubjectName(String subjectName) { this.subjectName = subjectName; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -84,6 +105,27 @@ public class ProjectResponse {
     public String getAttachmentUrl() { return attachmentUrl; }
     public void setAttachmentUrl(String attachmentUrl) { this.attachmentUrl = attachmentUrl; }
 
+    public String getPdfUrl() { return pdfUrl; }
+    public void setPdfUrl(String pdfUrl) { this.pdfUrl = pdfUrl; }
+
+    public String getPdfFileName() { return pdfFileName; }
+    public void setPdfFileName(String pdfFileName) { this.pdfFileName = pdfFileName; }
+
+    public Long getPdfFileSize() { return pdfFileSize; }
+    public void setPdfFileSize(Long pdfFileSize) { this.pdfFileSize = pdfFileSize; }
+
+    public String getPriority() { return priority; }
+    public void setPriority(String priority) { this.priority = priority; }
+
+    public Integer getPriorityRank() { return priorityRank; }
+    public void setPriorityRank(Integer priorityRank) { this.priorityRank = priorityRank; }
+
+    public Integer getMaxScore() { return maxScore; }
+    public void setMaxScore(Integer maxScore) { this.maxScore = maxScore; }
+
+    public String getAllocationNotes() { return allocationNotes; }
+    public void setAllocationNotes(String allocationNotes) { this.allocationNotes = allocationNotes; }
+
     public LocalDate getStartDate() { return startDate; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
 
@@ -116,6 +158,12 @@ public class ProjectResponse {
 
     public String getStudentSubmissionStatus() { return studentSubmissionStatus; }
     public void setStudentSubmissionStatus(String studentSubmissionStatus) { this.studentSubmissionStatus = studentSubmissionStatus; }
+
+    public Double getStudentScore() { return studentScore; }
+    public void setStudentScore(Double studentScore) { this.studentScore = studentScore; }
+
+    public Integer getStudentRank() { return studentRank; }
+    public void setStudentRank(Integer studentRank) { this.studentRank = studentRank; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

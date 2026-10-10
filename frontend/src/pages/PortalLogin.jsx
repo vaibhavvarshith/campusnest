@@ -180,6 +180,12 @@ export default function PortalLogin({ portal = 'student' }) {
               <label className="form-label" style={{ fontSize: '0.86rem', fontWeight: 600, color: '#1E293B', marginBottom: 0 }}>
                 Password
               </label>
+              <Link
+                to={`/forgot-password?portal=${portal}`}
+                style={{ fontSize: '0.82rem', color: '#2563EB', textDecoration: 'none', fontWeight: 600 }}
+              >
+                Forgot Password?
+              </Link>
             </div>
             <div style={{ position: 'relative' }}>
               <Lock

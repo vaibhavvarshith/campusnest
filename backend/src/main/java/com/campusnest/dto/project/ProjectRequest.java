@@ -12,11 +12,17 @@ public class ProjectRequest {
     @NotBlank(message = "Description is required")
     private String description;
 
-    @NotBlank(message = "Department is required")
-    private String department;
+    private String department = "Computer Science & Engineering";
 
-    @NotBlank(message = "Course is required")
-    private String course;
+    private String course = "B.Tech CSE";
+
+    private String subjectName = "Computer Science";
+
+    private Long facultyId; // Specific faculty assigned by Subject Head
+
+    private String priority = "MEDIUM"; // HIGH, MEDIUM, LOW
+
+    private Integer priorityRank = 1;
 
     private String academicYear = "Third Year";
 
@@ -26,12 +32,23 @@ public class ProjectRequest {
 
     private String instructions;
 
-    private String submissionFormat = "GitHub Repository / PDF Report";
+    private String submissionFormat = "PDF Document / Report";
 
     private String attachmentUrl;
 
-    @NotNull(message = "Start date is required")
-    private LocalDate startDate;
+    private String pdfUrl;
+
+    private String pdfFileName;
+
+    private Long pdfFileSize;
+
+    private Integer maxScore = 100;
+
+    private String allocationNotes;
+
+    private String status = "PUBLISHED"; // DRAFT, PENDING_ALLOCATION, ASSIGNED_TO_FACULTY, READY_FOR_STUDENTS, PUBLISHED
+
+    private LocalDate startDate = LocalDate.now();
 
     @NotNull(message = "Due date is required")
     private LocalDate dueDate;
@@ -50,6 +67,21 @@ public class ProjectRequest {
     public String getCourse() { return course; }
     public void setCourse(String course) { this.course = course; }
 
+    public String getSubjectName() { return subjectName; }
+    public void setSubjectName(String subjectName) { this.subjectName = subjectName; }
+
+    public Long getFacultyId() { return facultyId; }
+    public void setFacultyId(Long facultyId) { this.facultyId = facultyId; }
+
+    public Long getAllocatedFacultyId() { return facultyId; }
+    public void setAllocatedFacultyId(Long allocatedFacultyId) { this.facultyId = allocatedFacultyId; }
+
+    public String getPriority() { return priority; }
+    public void setPriority(String priority) { this.priority = priority; }
+
+    public Integer getPriorityRank() { return priorityRank; }
+    public void setPriorityRank(Integer priorityRank) { this.priorityRank = priorityRank; }
+
     public String getAcademicYear() { return academicYear; }
     public void setAcademicYear(String academicYear) { this.academicYear = academicYear; }
 
@@ -67,6 +99,24 @@ public class ProjectRequest {
 
     public String getAttachmentUrl() { return attachmentUrl; }
     public void setAttachmentUrl(String attachmentUrl) { this.attachmentUrl = attachmentUrl; }
+
+    public String getPdfUrl() { return pdfUrl; }
+    public void setPdfUrl(String pdfUrl) { this.pdfUrl = pdfUrl; }
+
+    public String getPdfFileName() { return pdfFileName; }
+    public void setPdfFileName(String pdfFileName) { this.pdfFileName = pdfFileName; }
+
+    public Long getPdfFileSize() { return pdfFileSize; }
+    public void setPdfFileSize(Long pdfFileSize) { this.pdfFileSize = pdfFileSize; }
+
+    public Integer getMaxScore() { return maxScore; }
+    public void setMaxScore(Integer maxScore) { this.maxScore = maxScore; }
+
+    public String getAllocationNotes() { return allocationNotes; }
+    public void setAllocationNotes(String allocationNotes) { this.allocationNotes = allocationNotes; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
     public LocalDate getStartDate() { return startDate; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }

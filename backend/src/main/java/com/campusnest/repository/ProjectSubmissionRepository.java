@@ -4,6 +4,8 @@ import com.campusnest.entity.ProjectSubmission;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -15,6 +17,9 @@ public interface ProjectSubmissionRepository extends JpaRepository<ProjectSubmis
     List<ProjectSubmission> findByProjectId(Long projectId);
 
     Page<ProjectSubmission> findByProjectId(Long projectId, Pageable pageable);
+
+    @Query("SELECT s FROM ProjectSubmission s WHERE s.project.id = :projectId ORDER BY s.score DESC NULLS LAST, s.submissionDate ASC")
+    List<ProjectSubmission> findByProjectIdOrderByScoreDesc(@Param("projectId") Long projectId);
 
     List<ProjectSubmission> findByStudentId(Long studentId);
 
