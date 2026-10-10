@@ -1,0 +1,36 @@
+# Compiled Java artifacts & Maven
+backend/target/
+*.class
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Node.js & React build
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/dist-ssr/
+*.local
+
+# Environment variables & secrets
+.env
+.env.production
+.env.local
+*.pem
+*.key
+
+# IDE & Editor files
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS files & logs
+.DS_Store
+Thumbs.db
+*.log
+logs/
+scratch/
