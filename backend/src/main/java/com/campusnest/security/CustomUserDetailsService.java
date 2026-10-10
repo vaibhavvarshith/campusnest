@@ -25,11 +25,14 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
+                .or(() -> userRepository.findByUsernameIgnoreCase(username))
                 .or(() -> {
                     if ("LIB2026001".equalsIgnoreCase(username)) {
-                        return userRepository.findByUsername("librarian");
+                        return userRepository.findByUsername("librarian")
+                                .or(() -> userRepository.findByUsernameIgnoreCase("librarian"));
                     } else if ("librarian".equalsIgnoreCase(username)) {
-                        return userRepository.findByUsername("LIB2026001");
+                        return userRepository.findByUsername("LIB2026001")
+                                .or(() -> userRepository.findByUsernameIgnoreCase("LIB2026001"));
                     }
                     return java.util.Optional.empty();
                 })

@@ -54,29 +54,47 @@ public class DevAccountBootstrap implements CommandLineRunner {
         Role adminRole = roleRepository.findByName("ROLE_ADMIN")
                 .orElseThrow(() -> new IllegalStateException("ROLE_ADMIN not found"));
 
-        User admin = userRepository.findByUsername("admin")
+        User admin = userRepository.findByUsername("Admin")
+                .or(() -> userRepository.findByUsername("admin"))
+                .or(() -> userRepository.findByUsernameIgnoreCase("Admin"))
                 .or(() -> userRepository.findByEmail("admin@campusnest.edu"))
                 .orElse(null);
 
         if (admin == null) {
             admin = new User();
-            admin.setUsername("admin");
+            admin.setUsername("Admin");
             admin.setFullName("System Administrator");
             admin.setEmail("admin@campusnest.edu");
             admin.setPhone("+91 9876543210");
             admin.setRole(adminRole);
-            admin.setPasswordHash(passwordEncoder.encode("admin123"));
+            admin.setPasswordHash(passwordEncoder.encode("Admin2026"));
             admin.setIsActive(true);
-            admin.setFirstLogin(true);
+            admin.setFirstLogin(false);
             userRepository.save(admin);
-            log.info("Initialized default development Admin account: 'admin' (password: admin123)");
-        } else if (Boolean.TRUE.equals(admin.getFirstLogin())) {
-            admin.setUsername("admin");
-            admin.setPasswordHash(passwordEncoder.encode("admin123"));
-            userRepository.save(admin);
-            log.info("Verified default development Admin account: 'admin' with initial password 'admin123'");
+            log.info("Initialized default development Admin account: 'Admin' (password: Admin2026)");
         } else {
-            log.debug("Admin account has changed initial password. Preserving chosen credentials.");
+            admin.setUsername("Admin");
+            admin.setRole(adminRole);
+            admin.setIsActive(true);
+
+            // Determine if current password hash is a default dev password (legacy admin123 or Admin2026) or custom
+            boolean isLegacyDevHash = admin.getPasswordHash() != null && passwordEncoder.matches("admin123", admin.getPasswordHash());
+            boolean isCurrentDevHash = admin.getPasswordHash() != null && passwordEncoder.matches("Admin2026", admin.getPasswordHash());
+            boolean isUnsetOrFirstLogin = admin.getPasswordHash() == null || Boolean.TRUE.equals(admin.getFirstLogin());
+
+            if (isLegacyDevHash || isUnsetOrFirstLogin) {
+                admin.setPasswordHash(passwordEncoder.encode("Admin2026"));
+                admin.setFirstLogin(false);
+                userRepository.save(admin);
+                log.info("Upgraded development Admin account to 'Admin' with secure password 'Admin2026'");
+            } else if (isCurrentDevHash) {
+                admin.setFirstLogin(false);
+                userRepository.save(admin);
+                log.info("Verified development Admin account: 'Admin' with password 'Admin2026'");
+            } else {
+                userRepository.save(admin);
+                log.info("Admin account has custom password configured. Preserving chosen credentials across restarts.");
+            }
         }
     }
 
@@ -85,6 +103,7 @@ public class DevAccountBootstrap implements CommandLineRunner {
                 .orElseThrow(() -> new IllegalStateException("ROLE_LIBRARIAN not found"));
 
         User librarian = userRepository.findByUsername("librarian")
+                .or(() -> userRepository.findByUsernameIgnoreCase("librarian"))
                 .or(() -> userRepository.findByEmail("librarian@campusnest.edu"))
                 .orElse(null);
 

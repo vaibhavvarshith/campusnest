@@ -73,7 +73,7 @@ flowchart TD
 - **Universal Password Recovery:** All 4 portals (`/admin/login`, `/librarian/login`, `/student/login`, `/faculty/login`) feature prominent password recovery.
 - **Anti-Enumeration Security:** Generic response protects against user account enumeration; time-limited (15 min) single-use cryptographic tokens prevent replay attacks.
 - **Password Complexity Validation:** Requires 8+ characters, uppercase, lowercase, numbers, and special characters before BCrypt hashing.
-- **Default Bootstrap:** Pre-configured local dev accounts `admin` (`admin123`) and `librarian` (`librarian123`) requiring first-login change, preserving user passwords across server restarts.
+- **Default Bootstrap:** Pre-configured local dev accounts `Admin` (`Admin2026`) and `librarian` (`librarian123`), preserving user passwords across server restarts.
 
 ---
 
@@ -95,7 +95,7 @@ CampusNest implements strict role-based authorization across all backend REST en
 
 | Portal | Username / ID | Initial Password | Role / Access Details |
 | :--- | :--- | :--- | :--- |
-| **Administrator** | `admin` | `admin123` | System Administrator (Mandatory First-Login Password Change) |
+| **Administrator** | `Admin` | `Admin2026` | System Administrator (Full System Privileges) |
 | **Librarian** | `librarian` | `librarian123` | Chief Circulation Desk Librarian |
 | **Subject Head** | `FAC2026001` | `FacultyPass123@` | Dr. Rajesh Kumar (Head of CSE & Subject Head) |
 | **Faculty Member**| `FAC2026002` | `FacultyPassword123!` | Prof. Anita Deshmukh (Associate Professor, IT) |

@@ -17,8 +17,8 @@ export default function PortalLogin({ portal = 'student' }) {
     admin: {
       title: 'Administrator Portal',
       subtitle: 'System Governance, User Administration & Library Infrastructure',
-      identifierLabel: 'Administrator Username or ID',
-      identifierPlaceholder: 'e.g. admin',
+      identifierLabel: 'Admin Username',
+      identifierPlaceholder: 'e.g. Admin',
       badge: 'System Administrator',
       badgeColor: '#142D4E',
       icon: ShieldCheck,
@@ -230,7 +230,7 @@ export default function PortalLogin({ portal = 'student' }) {
           >
             {loading ? 'Authenticating...' : (
               <>
-                Sign In to {config.badge} <ArrowRight size={18} />
+                {portal === 'admin' ? 'Sign In' : `Sign In to ${config.badge}`} <ArrowRight size={18} />
               </>
             )}
           </button>
