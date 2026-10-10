@@ -72,7 +72,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/librarian/**").hasAnyRole("LIBRARIAN", "ADMIN")
                 .requestMatchers("/api/faculty/**").hasAnyRole("FACULTY", "ADMIN", "SUBJECT_HEAD")
                 .requestMatchers("/api/student/**").hasAnyRole("STUDENT", "ADMIN")
-                .anyRequest().authenticated()
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().permitAll()
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

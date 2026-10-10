@@ -311,48 +311,68 @@ All protected endpoints require an `Authorization: Bearer <token>` header obtain
 | `GET` | `/api/student/dashboard` | Student | Upcoming book deadlines, fine summary, assignments |
 | `GET` | `/api/faculty/dashboard` | Faculty | Borrowed books, active course projects, submissions |
 | `GET` | `/api/reports/circulation-summary` | Admin | Total books, active loans, fines collected |
-| `POST` | `/api/settings/trigger-scheduler` | Admin | Manually trigger automated reminder cron job |
+| `POST` | `/api/admin/reminders/trigger` | Admin | Manually trigger automated reminder cron job |
 
 ---
 
-## 🌐 Production Cloud Deployment Guide
+## 🌐 Unified Single-Origin Production Deployment (One Public URL)
 
-### Option 1: Frontend on Vercel / Netlify
-1. Connect your GitHub repository (`https://github.com/vaibhavvarshith/campusnest`).
-2. Set **Root Directory** to `frontend`.
-3. Set **Build Command** to `npm run build`.
-4. Set **Output Directory** to `dist`.
-5. Add the Environment Variable:
-   ```ini
-   VITE_API_URL=https://your-backend-domain.com/api
-   ```
-6. Add single-page application rewrite rule in `frontend/public/_redirects`:
-   ```
-   /*    /index.html   200
-   ```
+CampusNest is packaged as a **single unified container** where the Spring Boot backend embeds the production React application and serves both the client-side SPA and the REST APIs from the **exact same domain and port**. This eliminates CORS setup, multiple URLs, and configuration friction.
 
-### Option 2: Java 21 Backend on Render / Railway
-1. Create a **Web Service** pointing to the repository.
-2. Select **Root Directory:** `backend`.
-3. Runtime: **Docker** (utilizing `backend/Dockerfile`) or **Java 21 Maven Build**:
-   - Build Command: `mvn clean package -DskipTests`
-   - Start Command: `java -jar target/campusnest-backend-1.0.0.jar`
-4. Set Environment Variables:
+### Architecture Highlights
+- **Single Public URL:** React frontend served at `/` and all client routes (`/admin/login`, `/student/dashboard`, etc.) via client-side routing.
+- **REST APIs:** Secured Spring Boot REST endpoints served under `/api/*`.
+- **Static Assets & Uploads:** Bundled JavaScript/CSS served at `/assets/*` and user PDF uploads served at `/uploads/*`.
+- **Automatic Redeployments:** Pushing changes to the GitHub repository `main` branch automatically redeploys the live application.
+
+---
+
+### Option 1: 1-Click Railway Deployment (Recommended)
+1. Log in to [Railway.app](https://railway.app/) and create a **New Project**.
+2. Add a **MySQL** database service to your project.
+3. Add a **GitHub Repo** service and select `vaibhavvarshith/campusnest`.
+4. Railway will automatically detect the root `Dockerfile` and `railway.json`.
+5. Under service **Variables**, link the database environment variables:
    ```ini
-   SPRING_DATASOURCE_URL=jdbc:mysql://<cloud-db-host>:3306/<cloud-db-name>?useSSL=true&serverTimezone=Asia/Kolkata
-   SPRING_DATASOURCE_USERNAME=<db_user>
-   SPRING_DATASOURCE_PASSWORD=<db_password>
+   SPRING_DATASOURCE_URL=jdbc:mysql://${{MYSQLHOST}}:${{MYSQLPORT}}/${{MYSQLDATABASE}}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
+   SPRING_DATASOURCE_USERNAME=${{MYSQLUSER}}
+   SPRING_DATASOURCE_PASSWORD=${{MYSQLPASSWORD}}
    JWT_SECRET=super_secret_production_key_minimum_256_bits_length!
    PORT=8080
+   TZ=Asia/Kolkata
+   UPLOAD_DIR=/app/uploads/submissions
    ```
+6. Under **Settings**, click **Generate Domain** to get your public URL (e.g., `https://campusnest-production.up.railway.app`).
+7. Open the generated domain. CampusNest is immediately live with all frontend and backend features!
 
-### Option 3: Cloud MySQL on Aiven / PlanetScale / AWS RDS
-1. Provision a MySQL 8.0 instance.
-2. Import the database schema and sample data:
-   ```bash
-   mysql -h <remote-host> -P 3306 -u <remote-user> -p <remote-db> < database/schema.sql
-   mysql -h <remote-host> -P 3306 -u <remote-user> -p <remote-db> < database/sample-data.sql
-   ```
+---
+
+### Option 2: Docker Compose (Self-Hosted / Cloud VPS)
+To deploy the complete stack (Unified Application + MySQL 8.0 + Persistent Volumes) on any VPS (AWS EC2, DigitalOcean, Hetzner, Linode):
+
+```bash
+# Clone the repository
+git clone https://github.com/vaibhavvarshith/campusnest.git
+cd campusnest
+
+# Start unified app and database in the background
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Access the application at `http://<your-server-ip>:8080`.
+
+---
+
+## 🔑 Demonstration & Production Default Credentials
+
+| Role | Username / Identifier | Default Password | Access URL |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `Admin` | `ADM2026` | `/admin/login` |
+| **Librarian** | Existing Librarian ID / username | `LIB2026` | `/login` |
+| **Faculty** | `FAC2026001` (or Employee ID) | `FAC2026` | `/login` |
+| **Student** | `STU2026001` (or Registration No.) | `STU2026` | `/login` |
+
+*Note: All roles support password change via user profiles and self-service password reset.*
 
 ---
 

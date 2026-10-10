@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  campusnest-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: campusnest-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://campusnest-mysql:3306/campusnest_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: rootpassword
+      JWT_SECRET: campusnest_super_secret_jwt_signing_key_2026_at_least_256_bits_long!
+      PORT: 8080
+      TZ: Asia/Kolkata
+      UPLOAD_DIR: /app/uploads/submissions
+    volumes:
+      - campusnest_uploads:/app/uploads/submissions
+    depends_on:
+      campusnest-mysql:
+        condition: service_healthy
+    networks:
+      - campusnest-network
+
+  campusnest-mysql:
+    image: mysql:8.0
+    container_name: campusnest-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: campusnest_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - campusnest_db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./database/sample-data.sql:/docker-entrypoint-initdb.d/02_sample-data.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - campusnest-network
+
+volumes:
+  campusnest_db_data:
+  campusnest_uploads:
+
+networks:
+  campusnest-network:
+    driver: bridge

@@ -1,0 +1,12 @@
+.git
+.gitignore
+.idea
+.vscode
+node_modules
+target
+dist
+uploads
+mysql_data
+*.log
+*.tmp
+scratch
