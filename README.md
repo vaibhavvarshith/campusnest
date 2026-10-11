@@ -225,7 +225,9 @@ The system is pre-populated with **103 classic and contemporary engineering, sci
    ```bash
    npm run dev
    ```
-   *The application portal is accessible at `http://localhost:5173`.*
+   *The application portal is accessible at 'http://localhost:5173'.*
+   The application portal is accessible at [http://127.0.0.1:5173](http://127.0.0.1:5173).
+
 
 ---
 
